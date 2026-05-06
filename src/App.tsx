@@ -1,0 +1,22 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MapDashboard } from "@/components/map/MapDashboard";
+import { ThemeProvider } from "@/hooks/useTheme";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <MapDashboard />
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
+}
