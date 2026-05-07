@@ -17,7 +17,7 @@ export type FilterState = {
 function applyFilters(
   data: DriverGeoJSON | undefined,
   filters: FilterState
-): GeoJSON.FeatureCollection {
+): DriverGeoJSON {
   if (!data) return { type: "FeatureCollection", features: [] };
 
   const statusSet = new Set(filters.statuses);
@@ -32,7 +32,7 @@ function applyFilters(
     return statusOk && movingOk && bikeOk;
   });
 
-  return { type: "FeatureCollection", features };
+  return { type: "FeatureCollection", features } as DriverGeoJSON;
 }
 
 // --- Popup ---

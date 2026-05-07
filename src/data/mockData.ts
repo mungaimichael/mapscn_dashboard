@@ -7,9 +7,7 @@ function rnd(min: number, max: number, decimals = 6) {
   return parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
 }
 
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+
 
 function batteryForStatus(
   status: string,

@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo } from "react";
 import {
   MapMarker,
   MarkerContent,
@@ -45,13 +45,7 @@ type HubsLayerProps = {
 };
 
 function HubsLayerInner({ data, label = "Hub" }: HubsLayerProps) {
-  const [openId, setOpenId] = useState<string | null>(null);
-
   const features = useMemo(() => data?.features ?? [], [data]);
-
-  const handleClick = useCallback((id: string) => {
-    setOpenId((prev) => (prev === id ? null : id));
-  }, []);
 
   return (
     <>
@@ -68,7 +62,6 @@ function HubsLayerInner({ data, label = "Hub" }: HubsLayerProps) {
               <button
                 type="button"
                 aria-label={`${label}: ${props.name}`}
-                onClick={() => handleClick(id)}
                 className="flex size-8 items-center justify-center rounded-full border-2 border-white shadow-md transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 style={{ backgroundColor: color }}
               >

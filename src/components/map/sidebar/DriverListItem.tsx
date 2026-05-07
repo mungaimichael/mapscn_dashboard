@@ -35,12 +35,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-function batteryClass(pct: number) {
-  // kept for any other uses
-  if (pct >= 70) return "text-emerald-400";
-  if (pct >= 30) return "text-amber-400";
-  return "text-red-400";
-}
+
 
 type DriverListItemProps = {
   driver: DriverProperties;

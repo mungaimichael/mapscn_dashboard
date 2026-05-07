@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { Search, Zap, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle } from "lucide-react";
+import { Search, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DriverListItem } from "./DriverListItem";
 import { useTheme } from "@/hooks/useTheme";
