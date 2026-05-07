@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { Search, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle } from "lucide-react";
+import { Search, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DriverListItem } from "./DriverListItem";
 import { useTheme } from "@/hooks/useTheme";
@@ -38,9 +38,11 @@ type DriverSidebarProps = {
   onSelect: (id: number, coords: [number, number]) => void;
   filters: FilterState;
   dispatch: React.Dispatch<FilterAction>;
+  isOpen?: boolean;
+  onClose?: () => void;
 };
 
-function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: DriverSidebarProps) {
+function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isOpen, onClose }: DriverSidebarProps) {
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("ALL");
   const { theme, toggleTheme } = useTheme();
@@ -79,14 +81,22 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
   };
 
   return (
-    <aside className="flex flex-col h-full w-72 shrink-0 bg-sidebar">
-      {/* ── Header ── */}
+    <aside className={cn(
+      "flex flex-col h-full w-72 shrink-0 bg-sidebar transition-transform duration-300 ease-in-out z-50",
+      "fixed inset-y-0 left-0 lg:relative lg:translate-x-0",
+      isOpen ? "translate-x-0" : "-translate-x-full"
+    )}>
       <div className="px-4 pt-5 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
         <div className="flex items-center gap-2.5 mb-4">
+          {/* Close button - Mobile only */}
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1.5 -ml-1 rounded-md text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <X className="size-4" />
+          </button>
 
-          {/* Right-side controls */}
           <div className="ml-auto flex items-center gap-2">
-            {/* Online count */}
             <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5">
               <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
@@ -94,7 +104,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
               </span>
             </div>
 
-            {/* Theme toggle */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -109,7 +118,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
           </div>
         </div>
 
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-foreground/30" />
           <input
@@ -126,7 +134,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
         </div>
       </div>
 
-      {/* ── Map Layers ── */}
       <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06]">
         <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2 flex items-center gap-1.5">
           <MapIcon className="size-3" /> Map Layers
@@ -159,7 +166,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
         </div>
       </div>
 
-      {/* ── Driver Filters ── */}
       <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06]">
         <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2">
           Bike Status
@@ -185,7 +191,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
         </div>
       </div>
 
-      {/* ── Driver count ── */}
       <div className="px-4 py-2 flex items-center gap-1.5 border-b border-black/[0.04] dark:border-white/[0.04]">
         <Users className="size-3 text-foreground/30" />
         <span className="text-[10px] text-foreground/35">
@@ -193,7 +198,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
         </span>
       </div>
 
-      {/* ── Scrollable list ── */}
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-foreground/30">
@@ -218,7 +222,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
         )}
       </div>
 
-      {/* ── Footer ── */}
       <div className="px-4 py-3 border-t border-black/[0.05] dark:border-white/[0.06]">
         <p className="text-[9px] text-foreground/20 text-center">
           Data refreshes every 15s

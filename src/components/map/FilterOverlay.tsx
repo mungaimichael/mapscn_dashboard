@@ -58,7 +58,7 @@ function FilterOverlayInner({
 }: FilterOverlayProps) {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 p-3">
-      {/* Left: Status filters */}
+      
       <div className="pointer-events-auto flex flex-wrap gap-1.5 rounded-xl border border-border/60 bg-background/90 backdrop-blur-sm p-2 shadow-sm">
         <span className="self-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pr-1">
           Status
@@ -89,7 +89,7 @@ function FilterOverlayInner({
         })}
       </div>
 
-      {/* Right: Moving + count */}
+      
       <div className="pointer-events-auto flex flex-col items-end gap-2">
         <div className="flex gap-1.5 rounded-xl border border-border/60 bg-background/90 backdrop-blur-sm p-2 shadow-sm">
           {ALL_MOVING.map(({ value, label }) => (

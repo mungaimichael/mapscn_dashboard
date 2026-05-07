@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { BatteryGauge } from "@/components/ui/BatteryGauge";
 import type { DriverProperties } from "@/components/map/useMapData";
 
-// --- Status config ---
 const STATUS_CONFIG: Record<
   string,
   { label: string; color: string; dot: string }
@@ -56,7 +55,7 @@ function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProp
         isSelected && "bg-black/[0.06] dark:bg-white/[0.08] shadow-[inset_3px_0_0_0_oklch(var(--sidebar-primary))]"
       )}
     >
-      {/* Status avatar */}
+      
       <div className="relative shrink-0">
         <div
           className={cn(
@@ -66,7 +65,7 @@ function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProp
         >
           {driver.driverName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
         </div>
-        {/* Live status dot */}
+        
         <span
           className={cn(
             "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2",
@@ -76,7 +75,7 @@ function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProp
         />
       </div>
 
-      {/* Info */}
+      
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground/90 truncate leading-tight">
           {driver.driverName}
@@ -91,7 +90,7 @@ function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProp
         </div>
       </div>
 
-      {/* Battery gauge */}
+      
       <div className="shrink-0">
         <BatteryGauge value={driver.Battery} size={44} />
       </div>

@@ -1,4 +1,6 @@
 import { useState, useCallback, useReducer, useRef } from "react";
+import { cn } from "@/lib/utils";
+import { Users } from "lucide-react";
 import { Map, MapControls } from "@/components/ui/map";
 import type { MapRef } from "@/components/ui/map";
 import { DriverClusters } from "./DriverClusters";
@@ -79,6 +81,7 @@ function filterReducer(state: FilterState, action: FilterAction): FilterState {
 export function MapDashboard() {
   const [filters, dispatch] = useReducer(filterReducer, DEFAULT_FILTERS);
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const mapRef = useRef<MapRef>(null);
   const { theme } = useTheme();
 
@@ -91,6 +94,10 @@ export function MapDashboard() {
   const handleDriverSelect = useCallback(
     (id: number, coords: [number, number]) => {
       setSelectedDriverId((prev) => (prev === id ? null : id));
+      // On mobile, close sidebar when a driver is selected to show the map
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      }
       mapRef.current?.flyTo({
         center: coords,
         zoom: 15,
@@ -102,21 +109,43 @@ export function MapDashboard() {
   );
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
-      {/* ── Left sidebar ── */}
+    <div className="flex h-full w-full overflow-hidden relative">
+      {/* ── Mobile Overlay ── */}
+      {isSidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ── */}
       <DriverSidebar
         data={driverData}
         selectedId={selectedDriverId}
         onSelect={handleDriverSelect}
         filters={filters}
         dispatch={dispatch}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
-      {/* ── Vertical divider ── */}
-      <div className="w-px bg-black/10 dark:bg-white/[0.06] shrink-0" />
+      {/* ── Desktop Divider ── */}
+      <div className="hidden lg:block w-px bg-black/10 dark:bg-white/[0.06] shrink-0" />
 
-      {/* ── Map ── */}
+      {/* ── Map Content ── */}
       <div className="relative flex-1 overflow-hidden">
+        {/* Mobile Toggle Button */}
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className={cn(
+            "lg:hidden absolute top-4 left-4 z-30 size-10 rounded-full",
+            "bg-background border border-border shadow-lg flex items-center justify-center",
+            "text-foreground/70 hover:text-foreground transition-transform active:scale-95"
+          )}
+        >
+          <Users className="size-5" />
+        </button>
+
         <Map
           ref={mapRef}
           center={INITIAL_CENTER}

@@ -80,7 +80,7 @@ function HubsLayerInner({ data, label = "Hub" }: HubsLayerProps) {
         return (
           <MapMarker key={id} longitude={lng} latitude={lat}>
             <MarkerContent>
-              {/* Hub dot — color encodes battery fill level */}
+              
               <button
                 type="button"
                 aria-label={`${label}: ${props.name}`}

@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { MOCK_DRIVERS, MOCK_ARC_HUBS, MOCK_ZENO_HUBS } from "@/data/mockData";
 
-// --- Types ---
 
 export type DriverStatus =
   | "DRIVER_STATUS_ONLINE"
@@ -49,9 +48,7 @@ export type HubFeature = GeoJSON.Feature<GeoJSON.Point, HubProperties>;
 export type DriverGeoJSON = GeoJSON.FeatureCollection<GeoJSON.Point, DriverProperties>;
 export type HubGeoJSON = GeoJSON.FeatureCollection<GeoJSON.Point, HubProperties>;
 
-// ---------------------------------------------------------------------------
 // Mock hooks — swap these for real fetch calls when the backend is ready
-// ---------------------------------------------------------------------------
 
 /** Simulates a live polling feed of driver positions (refreshes every 15s) */
 export function useDriverData() {

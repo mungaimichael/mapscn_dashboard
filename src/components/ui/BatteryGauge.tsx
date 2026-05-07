@@ -1,10 +1,8 @@
 import { memo } from "react";
 
-// ---------------------------------------------------------------------------
 // Segmented Arc Math
 // We center a 220° arc at the top. 
 // A 220° arc centered at 12 o'clock starts at 160° and ends at 20°.
-// ---------------------------------------------------------------------------
 
 const SEGMENTS = 5;
 const SWEEP = 220;
@@ -59,7 +57,7 @@ function BatteryGaugeInner({ value, size = 44 }: BatteryGaugeProps) {
 
           return (
             <g key={i} transform={`rotate(${rotation} ${CX} ${CY})`}>
-              {/* Background Track Segment */}
+              
               <circle
                 cx={CX}
                 cy={CY}
@@ -73,7 +71,7 @@ function BatteryGaugeInner({ value, size = 44 }: BatteryGaugeProps) {
                 strokeDashoffset={0}
               />
               
-              {/* Active Fill Segment */}
+              
               {segmentFill > 0 && (
                 <circle
                   cx={CX}
@@ -96,7 +94,7 @@ function BatteryGaugeInner({ value, size = 44 }: BatteryGaugeProps) {
         })}
       </g>
 
-      {/* Value label - perfectly centered */}
+      
       <text
         x={CX}
         y={CY + 1}

@@ -1584,14 +1584,16 @@ function MapClusterLayer<
     if (!isLoaded || !map) return;
 
     // Add clustered GeoJSON source
-    map.addSource(sourceId, {
-      type: "geojson",
-      data,
-      cluster: true,
-      clusterMaxZoom,
-      clusterRadius,
-      clusterProperties,
-    });
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, {
+        type: "geojson",
+        data,
+        cluster: true,
+        clusterMaxZoom,
+        clusterRadius,
+        clusterProperties,
+      });
+    }
 
     // Add cluster circles layer
     map.addLayer({
@@ -1648,18 +1650,34 @@ function MapClusterLayer<
       filter: ["!", ["has", "point_count"]],
       paint: {
         "circle-color": pointColor,
-        "circle-radius": 5,
+        "circle-radius": 6, // Slightly larger for visibility
         "circle-stroke-width": 2,
         "circle-stroke-color": "#fff",
       },
     });
 
+    // Add a larger transparent hit layer for easier clicking
+    const hitLayerId = `${unclusteredLayerId}-hit`;
+    map.addLayer({
+      id: hitLayerId,
+      type: "circle",
+      source: sourceId,
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-radius": 12, // Large hit area
+        "circle-color": "transparent",
+      },
+    });
+
     return () => {
       try {
+        const hitLayerId = `${unclusteredLayerId}-hit`;
         if (map.getLayer(clusterCountLayerId))
           map.removeLayer(clusterCountLayerId);
         if (map.getLayer(unclusteredLayerId))
           map.removeLayer(unclusteredLayerId);
+        if (map.getLayer(hitLayerId))
+          map.removeLayer(hitLayerId);
         if (map.getLayer(clusterLayerId)) map.removeLayer(clusterLayerId);
         if (map.getSource(sourceId)) map.removeSource(sourceId);
       } catch {
@@ -1802,20 +1820,21 @@ function MapClusterLayer<
       map.getCanvas().style.cursor = "";
     };
 
+    const hitLayerId = `${unclusteredLayerId}-hit`;
     map.on("click", clusterLayerId, handleClusterClick);
-    map.on("click", unclusteredLayerId, handlePointClick);
+    map.on("click", hitLayerId, handlePointClick);
     map.on("mouseenter", clusterLayerId, handleMouseEnterCluster);
     map.on("mouseleave", clusterLayerId, handleMouseLeaveCluster);
-    map.on("mouseenter", unclusteredLayerId, handleMouseEnterPoint);
-    map.on("mouseleave", unclusteredLayerId, handleMouseLeavePoint);
+    map.on("mouseenter", hitLayerId, handleMouseEnterPoint);
+    map.on("mouseleave", hitLayerId, handleMouseLeavePoint);
 
     return () => {
       map.off("click", clusterLayerId, handleClusterClick);
-      map.off("click", unclusteredLayerId, handlePointClick);
+      map.off("click", hitLayerId, handlePointClick);
       map.off("mouseenter", clusterLayerId, handleMouseEnterCluster);
       map.off("mouseleave", clusterLayerId, handleMouseLeaveCluster);
-      map.off("mouseenter", unclusteredLayerId, handleMouseEnterPoint);
-      map.off("mouseleave", unclusteredLayerId, handleMouseLeavePoint);
+      map.off("mouseenter", hitLayerId, handleMouseEnterPoint);
+      map.off("mouseleave", hitLayerId, handleMouseLeavePoint);
     };
   }, [
     isLoaded,

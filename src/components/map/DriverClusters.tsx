@@ -4,7 +4,6 @@ import { MapClusterLayer, MapPopup } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
 import type { DriverGeoJSON, DriverProperties, DriverStatus, MovingStatus, BikeMake } from "./useMapData";
 
-// --- Filter types ---
 export type FilterState = {
   statuses: DriverStatus[];
   movingStatuses: MovingStatus[];
@@ -13,7 +12,6 @@ export type FilterState = {
   showZenoHubs: boolean;
 };
 
-// --- Derived: filter data during render, no useEffect ---
 function applyFilters(
   data: DriverGeoJSON | undefined,
   filters: FilterState
@@ -35,7 +33,6 @@ function applyFilters(
   return { type: "FeatureCollection", features } as DriverGeoJSON;
 }
 
-// --- Popup ---
 function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
   const p = feature.properties as DriverProperties;
   const [lng, lat] = (feature.geometry as GeoJSON.Point).coordinates;
@@ -114,7 +111,6 @@ function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
   );
 }
 
-// --- Main Layer ---
 type DriverClustersProps = {
   data: DriverGeoJSON | undefined;
   filters: FilterState;
@@ -144,7 +140,6 @@ function DriverClustersInner({ data, filters }: DriverClustersProps) {
     setPopupCoords(null);
   }, []);
 
-  // --- Cluster Aggregation ---
   // We count how many bikes in each cluster have specific statuses
   const clusterProperties = useMemo(() => ({
     online_count: ["+", ["case", ["==", ["get", "status"], "DRIVER_STATUS_ONLINE"], 1, 0]],
@@ -172,8 +167,12 @@ function DriverClustersInner({ data, filters }: DriverClustersProps) {
           latitude={popupCoords[1]}
           onClose={handleClosePopup}
           closeButton={false}
+          closeOnClick={true}
+          closeOnMove={false}
         >
-          <DriverPopupContent feature={popupFeature} />
+          <div className="animate-in fade-in-0 zoom-in-95 duration-200 ease-out">
+            <DriverPopupContent feature={popupFeature} />
+          </div>
         </MapPopup>
       )}
     </>
