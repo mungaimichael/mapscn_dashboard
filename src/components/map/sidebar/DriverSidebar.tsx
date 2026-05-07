@@ -83,12 +83,6 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
       {/* ── Header ── */}
       <div className="px-4 pt-5 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
         <div className="flex items-center gap-2.5 mb-4">
-          <div>
-            <p className="text-sm font-semibold text-foreground/90 leading-none">
-              Fleet Tracker
-            </p>
-            <p className="text-[10px] text-foreground/40 mt-0.5">Greenwheels</p>
-          </div>
 
           {/* Right-side controls */}
           <div className="ml-auto flex items-center gap-2">
@@ -142,8 +136,8 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
             onClick={() => dispatch({ type: "TOGGLE_ARC_HUBS" })}
             className={cn(
               "w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors",
-              filters.showArcHubs 
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+              filters.showArcHubs
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                 : "text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
             )}
           >
@@ -154,8 +148,8 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch }: D
             onClick={() => dispatch({ type: "TOGGLE_ZENO_HUBS" })}
             className={cn(
               "w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors",
-              filters.showZenoHubs 
-                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" 
+              filters.showZenoHubs
+                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                 : "text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
             )}
           >

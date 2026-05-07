@@ -16,24 +16,46 @@ function hubColor(full: number): string {
 
 function HubPopupContent({ p }: { p: HubProperties }) {
   return (
-    <div className="w-52 space-y-2 text-sm">
-      <p className="font-semibold text-foreground">{p.name}</p>
-      <p className="text-xs text-muted-foreground">
-        Updated: {p.last_updated}
-      </p>
-      <div className="grid grid-cols-2 gap-1 text-xs">
-        <div className="rounded bg-green-50 dark:bg-green-950 px-2 py-1 text-green-700 dark:text-green-400">
-          <span className="font-bold">{p.full}</span> full
+    <div className="w-56 py-1">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-bold text-foreground tracking-tight">{p.name}</p>
+        <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_oklch(var(--sidebar-primary)/0.4)]" />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-px bg-border/50 border border-border rounded-lg overflow-hidden mb-3">
+        <div className="bg-background px-3 py-2">
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Full</p>
+          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">{p.full}</p>
         </div>
-        <div className="rounded bg-amber-50 dark:bg-amber-950 px-2 py-1 text-amber-700 dark:text-amber-400">
-          <span className="font-bold">{p.total_charging}</span> charging
+        <div className="bg-background px-3 py-2">
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Charging</p>
+          <p className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums leading-none">{p.total_charging}</p>
         </div>
       </div>
-      <div className="space-y-0.5 text-xs text-muted-foreground">
-        <p>90–99%: <span className="font-medium text-foreground">{p.chargingbin1}</span></p>
-        <p>80–89%: <span className="font-medium text-foreground">{p.chargingbin2}</span></p>
-        <p>70–79%: <span className="font-medium text-foreground">{p.chargingbin3}</span></p>
-        <p>Below 70%: <span className="font-medium text-foreground">{p.chargingbin4}</span></p>
+
+      <div className="space-y-2 px-1">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-muted-foreground">Charge Levels</span>
+          <span className="text-[9px] font-bold text-foreground/40 uppercase tracking-widest">Inventory</span>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">90–99%</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin1}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">80–89%</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin2}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">70–79%</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin3}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">&lt; 70%</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin4}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

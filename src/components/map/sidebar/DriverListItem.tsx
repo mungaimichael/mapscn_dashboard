@@ -51,9 +51,9 @@ function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProp
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-        "hover:bg-black/[0.04] dark:hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20",
-        isSelected && "bg-black/[0.05] dark:bg-white/[0.06] border-l-2 border-emerald-500"
+        "w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-200",
+        "hover:bg-black/[0.03] dark:hover:bg-white/[0.03] focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20",
+        isSelected && "bg-black/[0.06] dark:bg-white/[0.08] shadow-[inset_3px_0_0_0_oklch(var(--sidebar-primary))]"
       )}
     >
       {/* Status avatar */}
