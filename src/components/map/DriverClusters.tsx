@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { Copy, Check } from "lucide-react";
 import { MapClusterLayer, MapPopup } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,11 @@ function applyFilters(
 
   const features = data.features.filter((f) => {
     const p = f.properties as DriverProperties;
+    
+    // Ensure driver has valid coordinates
+    const coords = (f.geometry as GeoJSON.Point).coordinates;
+    if (!coords || coords[0] == null || coords[1] == null) return false;
+
     const statusOk = !p.status || statusSet.has(p.status);
     const movingOk = !p.movingStatus || movingSet.has(p.movingStatus);
     const bikeOk = !p.BikeMake || bikeSet.has(p.BikeMake as BikeMake);
@@ -114,10 +119,10 @@ function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
 type DriverClustersProps = {
   data: DriverGeoJSON | undefined;
   filters: FilterState;
-  selectedId?: number | null;
+  selectedId?: string | null;
 };
 
-function DriverClustersInner({ data, filters }: DriverClustersProps) {
+function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps) {
   const [popupFeature, setPopupFeature] = useState<GeoJSON.Feature | null>(null);
   const [popupCoords, setPopupCoords] = useState<[number, number] | null>(null);
 
@@ -127,8 +132,28 @@ function DriverClustersInner({ data, filters }: DriverClustersProps) {
     [data, filters]
   );
 
+  // Automatically show popup when a driver is selected from sidebar
+  useEffect(() => {
+    if (!selectedId || !data) {
+      setPopupFeature(null);
+      setPopupCoords(null);
+      return;
+    }
+
+    const feature = data.features.find(
+      (f) => (f.properties as DriverProperties).driverUuid === selectedId
+    );
+
+    if (feature) {
+      setPopupFeature(feature);
+      setPopupCoords((feature.geometry as GeoJSON.Point).coordinates as [number, number]);
+    }
+  }, [selectedId, data]);
+
   const handlePointClick = useCallback(
     (feature: GeoJSON.Feature, coords: [number, number]) => {
+      // If clicking a point, we might want to update the selected ID in parent as well
+      // But for now just show the local popup
       setPopupFeature(feature);
       setPopupCoords(coords);
     },

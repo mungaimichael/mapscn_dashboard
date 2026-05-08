@@ -15,6 +15,9 @@ function hubColor(full: number): string {
 }
 
 function HubPopupContent({ p }: { p: HubProperties }) {
+  const fullCount = p.full ?? p.availableswaps ?? p.fullbatteriesno ?? 0;
+  const chargingCount = p.total_charging ?? 0;
+
   return (
     <div className="w-56 py-1">
       <div className="flex items-center justify-between mb-3">
@@ -25,11 +28,11 @@ function HubPopupContent({ p }: { p: HubProperties }) {
       <div className="grid grid-cols-2 gap-px bg-border/50 border border-border rounded-lg overflow-hidden mb-3">
         <div className="bg-background px-3 py-2">
           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Full</p>
-          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">{p.full}</p>
+          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">{fullCount}</p>
         </div>
         <div className="bg-background px-3 py-2">
           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Charging</p>
-          <p className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums leading-none">{p.total_charging}</p>
+          <p className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums leading-none">{chargingCount}</p>
         </div>
       </div>
 
@@ -41,19 +44,19 @@ function HubPopupContent({ p }: { p: HubProperties }) {
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground">90–99%</span>
-            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin1}</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin1 ?? 0}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground">80–89%</span>
-            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin2}</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin2 ?? 0}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground">70–79%</span>
-            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin3}</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin3 ?? 0}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground">&lt; 70%</span>
-            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin4}</span>
+            <span className="text-xs font-bold text-foreground tabular-nums">{p.chargingbin4 ?? 0}</span>
           </div>
         </div>
       </div>
@@ -75,7 +78,8 @@ function HubsLayerInner({ data, label = "Hub" }: HubsLayerProps) {
         const [lng, lat] = feature.geometry.coordinates;
         const props = feature.properties;
         const id = feature.id?.toString() ?? `${label}-${i}`;
-        const color = hubColor(props.full);
+        const fullCount = props.full ?? props.availableswaps ?? props.fullbatteriesno ?? 0;
+        const color = hubColor(fullCount);
 
         return (
           <MapMarker key={id} longitude={lng} latitude={lat}>
@@ -88,7 +92,7 @@ function HubsLayerInner({ data, label = "Hub" }: HubsLayerProps) {
                 style={{ backgroundColor: color }}
               >
                 <span className="text-[9px] font-bold text-white leading-none">
-                  {props.full}
+                  {fullCount}
                 </span>
               </button>
             </MarkerContent>

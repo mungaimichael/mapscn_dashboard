@@ -6,7 +6,7 @@ import type { MapRef } from "@/components/ui/map";
 import { DriverClusters } from "./DriverClusters";
 import { HubsLayer } from "./HubsLayer";
 import { DriverSidebar } from "./sidebar/DriverSidebar";
-import { useDriverData, useArcHubs, useZenoHubs } from "./useMapData";
+import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
 import { useTheme } from "@/hooks/useTheme";
 import type { FilterState } from "./DriverClusters";
 import type { DriverStatus, MovingStatus } from "./useMapData";
@@ -80,10 +80,13 @@ function filterReducer(state: FilterState, action: FilterAction): FilterState {
 
 export function MapDashboard() {
   const [filters, dispatch] = useReducer(filterReducer, DEFAULT_FILTERS);
-  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const mapRef = useRef<MapRef>(null);
   const { theme } = useTheme();
+
+  // Debounced viewport tracker — invalidates queries only after map is idle for 300ms
+  const { handleViewportChange } = useMapViewport(300);
 
   // All three fetches fire concurrently via React Query
   const { data: driverData } = useDriverData();
@@ -92,17 +95,26 @@ export function MapDashboard() {
 
   // Fly to driver on sidebar click
   const handleDriverSelect = useCallback(
-    (id: number, coords: [number, number]) => {
-      setSelectedDriverId((prev) => (prev === id ? null : id));
-      // On mobile, close sidebar when a driver is selected to show the map
-      if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-      }
-      mapRef.current?.flyTo({
-        center: coords,
-        zoom: 15,
-        duration: 1200,
-        essential: true,
+    (id: string, coords: [number, number]) => {
+      setSelectedDriverId((prev) => {
+        const isNewSelection = prev !== id;
+        
+        // Only fly if we are selecting a new driver and coordinates are valid
+        if (isNewSelection && coords && coords[0] != null && coords[1] != null) {
+          mapRef.current?.flyTo({
+            center: coords,
+            zoom: 15,
+            duration: 1200,
+            essential: true,
+          });
+          
+          // On mobile, close sidebar when a driver is selected to show the map
+          if (window.innerWidth < 1024) {
+            setIsSidebarOpen(false);
+          }
+        }
+
+        return isNewSelection ? id : null;
       });
     },
     []
@@ -153,6 +165,7 @@ export function MapDashboard() {
           theme={theme}
           dragRotate={true}
           touchZoomRotate={true}
+          onViewportChange={handleViewportChange}
         >
           <MapControls position="bottom-right" showZoom showCompass showFullscreen />
 
