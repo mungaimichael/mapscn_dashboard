@@ -34,8 +34,8 @@ const ACTIVE_CHIP: Partial<Record<StatusFilter, string>> = {
 
 type DriverSidebarProps = {
   data: DriverGeoJSON | undefined;
-  selectedId: number | null;
-  onSelect: (id: number, coords: [number, number]) => void;
+  selectedId: string | null;
+  onSelect: (id: string, coords: [number, number]) => void;
   filters: FilterState;
   dispatch: React.Dispatch<FilterAction>;
   isOpen?: boolean;
@@ -51,6 +51,9 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
     const features = data?.features ?? [];
     return features.filter((f) => {
       const p = f.properties as DriverProperties;
+      // Skip drivers without valid coordinates — they can't be shown on the map
+      const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
+      if (lng == null || lat == null) return false;
       const matchesStatus =
         activeStatus === "ALL" || p.status === activeStatus;
       const q = query.toLowerCase();
@@ -206,13 +209,14 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
           </div>
         ) : (
           <div className="divide-y divide-black/[0.04] dark:divide-white/[0.03]">
-            {filtered.map((f) => {
-              const id = f.id as number;
-              const [lng, lat] = f.geometry.coordinates;
+            {filtered.map((f, idx) => {
+              const p = f.properties as DriverProperties;
+              const id = p.driverUuid ?? `driver-${idx}`;
+              const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
               return (
                 <DriverListItem
                   key={id}
-                  driver={f.properties as DriverProperties}
+                  driver={p}
                   isSelected={selectedId === id}
                   onClick={() => onSelect(id, [lng, lat])}
                 />
