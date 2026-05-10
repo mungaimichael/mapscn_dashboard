@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { Search, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle, X, Globe, ChevronDown, Settings2 } from "lucide-react";
+import { Search, Users, Sun, Moon, CheckCircle2, X, Globe, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";
 import { cn } from "@/lib/utils";

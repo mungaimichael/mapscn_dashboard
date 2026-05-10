@@ -91,8 +91,8 @@ export function MapDashboard() {
 
   // All three fetches fire concurrently via React Query
   const { data: driverData, isLoading: isDriversLoading } = useDriverData();
-  const { data: arcHubs, isLoading: isArcLoading } = useArcHubs();
-  const { data: zenoHubs, isLoading: isZenoLoading } = useZenoHubs();
+  const { data: arcHubs } = useArcHubs();
+  const { data: zenoHubs } = useZenoHubs();
 
   const isInitialLoading = isDriversLoading && !driverData;
 
