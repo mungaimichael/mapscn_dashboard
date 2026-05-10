@@ -1,0 +1,33 @@
+{
+  "sidebar": {
+    "search_placeholder": "Search driver or plate…",
+    "map_layers": "Map Layers",
+    "arc_hubs": "Arc Ride Hubs",
+    "zeno_hubs": "Zeno Hubs",
+    "bike_status": "Bike Status",
+    "driver_count": "{{count}} driver",
+    "driver_count_plural": "{{count}} drivers",
+    "no_drivers": "No drivers found",
+    "refresh_rate": "Data refreshes every 15s"
+  },
+  "status": {
+    "all": "All",
+    "online": "Online",
+    "ontrip": "On Trip",
+    "enroute": "En Route",
+    "offline": "Offline",
+    "unassigned": "Unassigned",
+    "label": "Status",
+    "moving_label": "Moving",
+    "moving": "Moving",
+    "parked": "Parked",
+    "battery": "Battery"
+  },
+  "hubs": {
+    "full": "Full",
+    "charging": "Charging",
+    "charge_levels": "Charge Levels",
+    "inventory": "Inventory",
+    "default_label": "Hub"
+  }
+}

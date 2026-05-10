@@ -1,0 +1,33 @@
+{
+  "sidebar": {
+    "search_placeholder": "Tafuta dereva au nambari ya gari…",
+    "map_layers": "Tabaka za Ramani",
+    "arc_hubs": "Vituo vya Arc Ride",
+    "zeno_hubs": "Vituo vya Zeno",
+    "bike_status": "Hali ya Pikipiki",
+    "driver_count": "Dereva {{count}}",
+    "driver_count_plural": "Madereva {{count}}",
+    "no_drivers": "Hakuna madereva waliopatikana",
+    "refresh_rate": "Data hurejelewa kila sekunde 15"
+  },
+  "status": {
+    "all": "Zote",
+    "online": "Yupo",
+    "ontrip": "Safarini",
+    "enroute": "Njiani",
+    "offline": "Hayupo",
+    "unassigned": "Haijapangiwa",
+    "label": "Hali",
+    "moving_label": "Mwendo",
+    "moving": "Anasonga",
+    "parked": "Ameegesha",
+    "battery": "Betri"
+  },
+  "hubs": {
+    "full": "Zimejaa",
+    "charging": "Zinachaji",
+    "charge_levels": "Viwango vya Chaji",
+    "inventory": "Hesabu",
+    "default_label": "Kituo"
+  }
+}
