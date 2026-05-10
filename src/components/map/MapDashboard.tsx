@@ -149,6 +149,7 @@ export function MapDashboard() {
         {/* Mobile Toggle Button */}
         <button
           onClick={() => setIsSidebarOpen(true)}
+          aria-label="Open sidebar"
           className={cn(
             "lg:hidden absolute top-4 left-4 z-30 size-10 rounded-full",
             "bg-background border border-border shadow-lg flex items-center justify-center",

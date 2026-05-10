@@ -88,6 +88,7 @@ type MapContextValue = {
 };
 
 const MapContext = createContext<MapContextValue | null>(null);
+const SourceContext = createContext<boolean>(false);
 
 function useMap() {
   const context = useContext(MapContext);
@@ -95,6 +96,10 @@ function useMap() {
     throw new Error("useMap must be used within a Map component");
   }
   return context;
+}
+
+function useSource() {
+  return useContext(SourceContext);
 }
 
 /** Map viewport state */
@@ -977,12 +982,22 @@ function MapPopup({
     popup.on("close", onCloseProp);
 
     popup.setDOMContent(container);
-    popup.addTo(map);
+    
+    // Add to map but catch if map is already being destroyed
+    try {
+      popup.addTo(map);
+    } catch (err) {
+      console.warn("Could not add popup to map", err);
+    }
 
     return () => {
       popup.off("close", onCloseProp);
-      if (popup.isOpen()) {
-        popup.remove();
+      try {
+        if (popup.isOpen()) {
+          popup.remove();
+        }
+      } catch (err) {
+        // ignore
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1671,6 +1686,9 @@ function MapClusterLayer<
 
     return () => {
       try {
+        // Check if map is still "alive" before attempting cleanup
+        if (!map || !map.getStyle()) return;
+        
         const hitLayerId = `${unclusteredLayerId}-hit`;
         if (map.getLayer(clusterCountLayerId))
           map.removeLayer(clusterCountLayerId);
@@ -1680,8 +1698,8 @@ function MapClusterLayer<
           map.removeLayer(hitLayerId);
         if (map.getLayer(clusterLayerId)) map.removeLayer(clusterLayerId);
         if (map.getSource(sourceId)) map.removeSource(sourceId);
-      } catch {
-        // ignore
+      } catch (err) {
+        // Ignore errors during cleanup as the map might have been destroyed
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1772,11 +1790,17 @@ function MapClusterLayer<
       } else {
         // Default behavior: zoom to cluster expansion zoom
         const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource;
-        const zoom = await source.getClusterExpansionZoom(clusterId);
-        map.easeTo({
-          center: coordinates,
-          zoom,
-        });
+        if (source) {
+          try {
+            const zoom = await source.getClusterExpansionZoom(clusterId);
+            map.easeTo({
+              center: coordinates,
+              zoom,
+            });
+          } catch (err) {
+            console.warn("Failed to get cluster expansion zoom", err);
+          }
+        }
       }
     };
 
@@ -1849,6 +1873,159 @@ function MapClusterLayer<
   return null;
 }
 
+function MapSource({
+  id,
+  children,
+  ...sourceOptions
+}: { id: string; children?: ReactNode } & MapLibreGL.SourceSpecification) {
+  const { map, isLoaded } = useMap();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+    
+    // Check if source already exists (e.g. from a previous render that wasn't cleaned up yet)
+    if (map.getSource(id)) {
+      setIsReady(true);
+      return;
+    }
+
+    try {
+      map.addSource(id, sourceOptions as MapLibreGL.SourceSpecification);
+      setIsReady(true);
+    } catch (err) {
+      console.error(`Error adding source ${id}:`, err);
+    }
+
+    return () => {
+      setIsReady(false);
+      try {
+        // Only attempt cleanup if the map is still "valid"
+        if (map.getStyle() && map.getSource(id)) {
+          // Find and remove all layers using this source first
+          const layers = map.getStyle().layers;
+          if (layers) {
+            layers
+              .filter((l) => "source" in l && l.source === id)
+              .forEach((l) => map.removeLayer(l.id));
+          }
+          map.removeSource(id);
+        }
+      } catch (err) {
+        // Ignore errors during cleanup as the map might have been destroyed
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, map, id]);
+
+  useEffect(() => {
+    if (!isLoaded || !map || !isReady) return;
+    try {
+      const source = map.getSource(id);
+      if (source && source.type === "geojson" && "data" in sourceOptions) {
+        (source as MapLibreGL.GeoJSONSource).setData(
+          sourceOptions.data as GeoJSON.GeoJSON | string,
+        );
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }, [isLoaded, map, id, isReady, sourceOptions.data]);
+
+  return (
+    <SourceContext.Provider value={isReady}>
+      {children}
+    </SourceContext.Provider>
+  );
+}
+
+function MapLayer({
+  id,
+  source,
+  beforeId,
+  onMouseEnter,
+  onMouseLeave,
+  onClick,
+  ...layerOptions
+}: {
+  id: string;
+  source: string;
+  beforeId?: string;
+  onMouseEnter?: (e: MapLibreGL.MapLayerMouseEvent) => void;
+  onMouseLeave?: (e: MapLibreGL.MapLayerMouseEvent) => void;
+  onClick?: (e: MapLibreGL.MapLayerMouseEvent) => void;
+} & Omit<MapLibreGL.LayerSpecification, "id" | "source">) {
+  const { map, isLoaded } = useMap();
+  const isSourceReady = useSource();
+
+  useEffect(() => {
+    // Only add layer if map is loaded AND source is ready
+    if (!isLoaded || !map || !isSourceReady) return;
+    if (map.getLayer(id)) return;
+
+    try {
+      map.addLayer(
+        {
+          id,
+          source,
+          ...layerOptions,
+        } as MapLibreGL.LayerSpecification,
+        beforeId,
+      );
+    } catch (err) {
+      console.error(`Error adding layer ${id}:`, err);
+      return;
+    }
+
+    const handleMouseEnter = (e: MapLibreGL.MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = "pointer";
+      onMouseEnter?.(e);
+    };
+    const handleMouseLeave = (e: MapLibreGL.MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = "";
+      onMouseLeave?.(e);
+    };
+    const handleClick = (e: MapLibreGL.MapLayerMouseEvent) => {
+      onClick?.(e);
+    };
+
+    map.on("mouseenter", id, handleMouseEnter);
+    map.on("mouseleave", id, handleMouseLeave);
+    map.on("click", id, handleClick);
+
+    return () => {
+      map.off("mouseenter", id, handleMouseEnter);
+      map.off("mouseleave", id, handleMouseLeave);
+      map.off("click", id, handleClick);
+      if (map.getLayer(id)) map.removeLayer(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, map, source]);
+
+  useEffect(() => {
+    if (!isLoaded || !map || !isSourceReady) return;
+    
+    try {
+      if (!map.getLayer(id)) return;
+
+      if (layerOptions.paint) {
+        for (const [key, value] of Object.entries(layerOptions.paint)) {
+          map.setPaintProperty(id, key, value);
+        }
+      }
+      if (layerOptions.layout) {
+        for (const [key, value] of Object.entries(layerOptions.layout)) {
+          map.setLayoutProperty(id, key, value);
+        }
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }, [isLoaded, map, id, isSourceReady, layerOptions.paint, layerOptions.layout]);
+
+  return null;
+}
+
 export {
   Map,
   useMap,
@@ -1862,6 +2039,8 @@ export {
   MapRoute,
   MapArc,
   MapClusterLayer,
+  MapSource,
+  MapLayer,
 };
 
 export type { MapRef, MapViewport, MapArcDatum, MapArcEvent };

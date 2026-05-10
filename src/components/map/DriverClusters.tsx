@@ -1,4 +1,5 @@
 import { memo, useMemo, useState, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Copy, Check } from "lucide-react";
 import { MapClusterLayer, MapPopup } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ function applyFilters(
 
   const features = data.features.filter((f) => {
     const p = f.properties as DriverProperties;
-    
+
     // Ensure driver has valid coordinates
     const coords = (f.geometry as GeoJSON.Point).coordinates;
     if (!coords || coords[0] == null || coords[1] == null) return false;
@@ -39,24 +40,23 @@ function applyFilters(
 }
 
 function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
-  const p = feature.properties as DriverProperties;
-  const [lng, lat] = (feature.geometry as GeoJSON.Point).coordinates;
+  const { t } = useTranslation();
+  const p = (feature?.properties ?? {}) as DriverProperties;
+  
+  const coordinates = (feature?.geometry as GeoJSON.Point)?.coordinates;
+  if (!coordinates || coordinates.length < 2) return null;
+  const [lng, lat] = coordinates;
+  
   const [copied, setCopied] = useState(false);
-
+ 
   const batteryColor =
-    p.Battery >= 70
+    (p.Battery ?? 0) >= 70
       ? "text-green-600 dark:text-green-400"
-      : p.Battery >= 30
-      ? "text-amber-600 dark:text-amber-400"
-      : "text-red-600 dark:text-red-400";
-
-  const statusLabel: Record<string, string> = {
-    DRIVER_STATUS_ONLINE: "Online",
-    DRIVER_STATUS_OFFLINE: "Offline",
-    DRIVER_STATUS_ONTRIP: "On Trip",
-    DRIVER_STATUS_ENROUTE: "En Route",
-    UNASSIGNED: "Unassigned",
-  };
+      : (p.Battery ?? 0) >= 30
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-red-600 dark:text-red-400";
+ 
+  const statusKey = p.status?.replace("DRIVER_STATUS_", "").toLowerCase() || "unassigned";
 
   const handleCopy = () => {
     const text = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
@@ -75,14 +75,16 @@ function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
-        <span className="text-muted-foreground">Status</span>
-        <span className="font-semibold">{statusLabel[p.status] ?? p.status}</span>
+        <span className="text-muted-foreground">{t("status.label") || "Status"}</span>
+        <span className="font-semibold tabular-nums">{t(`status.${statusKey}`)}</span>
 
-        <span className="text-muted-foreground">Moving</span>
-        <span className="font-semibold capitalize">{p.movingStatus?.toLowerCase()}</span>
+        <span className="text-muted-foreground">{t("status.moving_label") || "Moving"}</span>
+        <span className="font-semibold capitalize tabular-nums">
+          {t(`status.${p.movingStatus?.toLowerCase()}`)}
+        </span>
 
-        <span className="text-muted-foreground">Battery</span>
-        <span className={`font-bold ${batteryColor}`}>{p.Battery}%</span>
+        <span className="text-muted-foreground">{t("status.battery") || "Battery"}</span>
+        <span className={`font-bold tabular-nums ${batteryColor}`}>{p.Battery}%</span>
 
         <span className="text-muted-foreground">Speed</span>
         <span className="font-semibold tabular-nums">{p.VehicleSpeed} km/h</span>
@@ -100,8 +102,8 @@ function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
             onClick={handleCopy}
             className={cn(
               "p-1.5 rounded-md transition-all",
-              copied 
-                ? "bg-emerald-500/10 text-emerald-500" 
+              copied
+                ? "bg-emerald-500/10 text-emerald-500"
                 : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
             )}
           >
@@ -179,7 +181,6 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
         clusterMaxZoom={14}
         clusterRadius={50}
         clusterProperties={clusterProperties}
-        // Colors from MapLibre official example: Cyan, Yellow, Pink
         clusterColors={["#51bbd6", "#f1f075", "#f28cb1"]}
         clusterThresholds={[100, 750]}
         pointColor="#3b82f6"

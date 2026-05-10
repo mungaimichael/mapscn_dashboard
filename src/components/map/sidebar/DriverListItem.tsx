@@ -2,36 +2,24 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { BatteryGauge } from "@/components/ui/BatteryGauge";
 import type { DriverProperties } from "@/components/map/useMapData";
+import { useTranslation } from "react-i18next";
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; color: string; dot: string }
-> = {
-  DRIVER_STATUS_ONLINE: {
-    label: "Online",
-    color: "text-emerald-400",
-    dot: "bg-emerald-400",
-  },
-  DRIVER_STATUS_ONTRIP: {
-    label: "On Trip",
-    color: "text-blue-400",
-    dot: "bg-blue-400",
-  },
-  DRIVER_STATUS_ENROUTE: {
-    label: "En Route",
-    color: "text-violet-400",
-    dot: "bg-violet-400",
-  },
-  DRIVER_STATUS_OFFLINE: {
-    label: "Offline",
-    color: "text-zinc-500",
-    dot: "bg-zinc-500",
-  },
-  UNASSIGNED: {
-    label: "Unassigned",
-    color: "text-amber-400",
-    dot: "bg-amber-400",
-  },
+const STATUS_KEYS = [
+  "DRIVER_STATUS_ONLINE",
+  "DRIVER_STATUS_ONTRIP",
+  "DRIVER_STATUS_ENROUTE",
+  "DRIVER_STATUS_OFFLINE",
+  "UNASSIGNED",
+] as const;
+
+type StatusType = (typeof STATUS_KEYS)[number];
+
+const STATUS_STYLE: Record<StatusType, { color: string; dot: string }> = {
+  DRIVER_STATUS_ONLINE: { color: "text-emerald-400", dot: "bg-emerald-400" },
+  DRIVER_STATUS_ONTRIP: { color: "text-blue-400", dot: "bg-blue-400" },
+  DRIVER_STATUS_ENROUTE: { color: "text-violet-400", dot: "bg-violet-400" },
+  DRIVER_STATUS_OFFLINE: { color: "text-zinc-500", dot: "bg-zinc-500" },
+  UNASSIGNED: { color: "text-amber-400", dot: "bg-amber-400" },
 };
 
 
@@ -43,7 +31,11 @@ type DriverListItemProps = {
 };
 
 function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProps) {
-  const cfg = STATUS_CONFIG[driver.status] ?? STATUS_CONFIG.UNASSIGNED;
+  const { t } = useTranslation();
+  
+  const statusKey = (driver.status as StatusType) || "UNASSIGNED";
+  const style = STATUS_STYLE[statusKey] || STATUS_STYLE.UNASSIGNED;
+  const label = t(`status.${statusKey.replace("DRIVER_STATUS_", "").toLowerCase()}`);
 
   return (
     <button
@@ -70,7 +62,7 @@ function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProp
           className={cn(
             "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2",
             "border-sidebar",
-            cfg.dot
+            style.dot
           )}
         />
       </div>
@@ -84,8 +76,8 @@ function DriverListItemInner({ driver, isSelected, onClick }: DriverListItemProp
           <span className="text-[10px] font-mono text-foreground/40 uppercase tracking-wider">
             {driver.licensePlate === "UNASSIGNED" ? "—" : driver.licensePlate}
           </span>
-          <span className={cn("text-[10px] font-medium", cfg.color)}>
-            {cfg.label}
+          <span className={cn("text-[10px] font-medium tabular-nums", style.color)}>
+            {label}
           </span>
         </div>
       </div>

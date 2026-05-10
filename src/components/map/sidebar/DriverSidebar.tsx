@@ -1,5 +1,7 @@
-import { memo, useMemo, useState } from "react";
-import { Search, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle, X } from "lucide-react";
+import { memo, useMemo, useState, useCallback } from "react";
+import { Search, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle, X, Globe, ChevronDown, Settings2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Virtuoso } from "react-virtuoso";
 import { cn } from "@/lib/utils";
 import { DriverListItem } from "./DriverListItem";
 import { useTheme } from "@/hooks/useTheme";
@@ -9,13 +11,13 @@ import type { FilterAction } from "../MapDashboard";
 
 type StatusFilter = DriverStatus | "ALL";
 
-const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "DRIVER_STATUS_ONLINE", label: "Online" },
-  { value: "DRIVER_STATUS_ONTRIP", label: "On Trip" },
-  { value: "DRIVER_STATUS_ENROUTE", label: "En Route" },
-  { value: "DRIVER_STATUS_OFFLINE", label: "Offline" },
-  { value: "UNASSIGNED", label: "Unassigned" },
+const STATUS_FILTERS: (t: any) => { value: StatusFilter; label: string }[] = (t) => [
+  { value: "ALL", label: t("status.all") },
+  { value: "DRIVER_STATUS_ONLINE", label: t("status.online") },
+  { value: "DRIVER_STATUS_ONTRIP", label: t("status.on_trip") },
+  { value: "DRIVER_STATUS_ENROUTE", label: t("status.en_route") },
+  { value: "DRIVER_STATUS_OFFLINE", label: t("status.offline") },
+  { value: "UNASSIGNED", label: t("status.unassigned") },
 ];
 
 // Active chip colors per status
@@ -45,7 +47,15 @@ type DriverSidebarProps = {
 function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isOpen, onClose }: DriverSidebarProps) {
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("ALL");
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { t, i18n } = useTranslation();
+
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    setIsLangOpen(false);
+  };
+
 
   const filtered = useMemo(() => {
     const features = data?.features ?? [];
@@ -107,17 +117,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className={cn(
-                "size-7 rounded-md flex items-center justify-center transition-colors",
-                "text-foreground/40 hover:text-foreground/70",
-                "hover:bg-black/[0.06] dark:hover:bg-white/[0.07]"
-              )}
-            >
-              {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-            </button>
+            {/* Mobile close handled here, settings moved to dedicated section */}
           </div>
         </div>
 
@@ -125,21 +125,98 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-foreground/30" />
           <input
             type="text"
-            placeholder="Search driver or plate..."
+            name="driver-search"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={t("sidebar.search_placeholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className={cn(
               "w-full pl-8 pr-3 py-2 rounded-lg text-xs",
               "bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.08]",
-              "text-foreground/80 placeholder:text-foreground/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+              "text-foreground/80 placeholder:text-foreground/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40"
             )}
           />
         </div>
       </div>
 
+      {/* ── Preferences Section ── */}
+      <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.01]">
+        <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+          <Settings2 className="size-3" /> Preferences
+        </p>
+        
+        <div className="flex items-center justify-between gap-2">
+          {/* Language Selector */}
+          <div className="relative flex-1">
+            <button
+              type="button"
+              onClick={() => setIsLangOpen(!isLangOpen)}
+              aria-label="Select language"
+              aria-expanded={isLangOpen}
+              aria-haspopup="listbox"
+              className={cn(
+                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors border focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
+                "bg-background border-black/[0.08] dark:border-white/[0.08]",
+                "text-foreground/60 hover:text-foreground/80",
+                isLangOpen && "border-emerald-500/40 ring-1 ring-emerald-500/20"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Globe className="size-3.5 text-emerald-500/60" />
+                <span className="text-[11px] font-medium">
+                  {i18n.language === "en" ? "English" : "Kiswahili"}
+                </span>
+              </div>
+              <ChevronDown className={cn("size-3 transition-transform opacity-40", isLangOpen && "rotate-180")} />
+            </button>
+
+            {isLangOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setIsLangOpen(false)} />
+                <div className="absolute left-0 bottom-full mb-1.5 w-full py-1 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-background shadow-xl z-20 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                  <button
+                    onClick={() => changeLanguage("en")}
+                    className={cn(
+                      "w-full px-3 py-2 text-left text-[11px] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] flex items-center justify-between",
+                      i18n.language === "en" ? "text-emerald-500 font-bold" : "text-foreground/60"
+                    )}
+                  >
+                    English {i18n.language === "en" && <CheckCircle2 className="size-3" />}
+                  </button>
+                  <button
+                    onClick={() => changeLanguage("sw")}
+                    className={cn(
+                      "w-full px-3 py-2 text-left text-[11px] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] flex items-center justify-between",
+                      i18n.language === "sw" ? "text-emerald-500 font-bold" : "text-foreground/60"
+                    )}
+                  >
+                    Kiswahili {i18n.language === "sw" && <CheckCircle2 className="size-3" />}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Theme Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            className={cn(
+              "size-8 shrink-0 rounded-md flex items-center justify-center transition-colors border focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
+              "bg-background border-black/[0.08] dark:border-white/[0.08]",
+              "text-foreground/40 hover:text-emerald-500 hover:border-emerald-500/30"
+            )}
+          >
+            {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+          </button>
+        </div>
+      </div>
+
       <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06]">
         <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-          <MapIcon className="size-3" /> Map Layers
+          <MapIcon className="size-3" /> {t("sidebar.map_layers")}
         </p>
         <div className="space-y-1.5">
           <button
@@ -151,7 +228,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
                 : "text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
             )}
           >
-            <span>Arc Ride Hubs</span>
+            <span>{t("sidebar.arc_hubs")}</span>
             {filters.showArcHubs ? <CheckCircle2 className="size-3" /> : <Circle className="size-3" />}
           </button>
           <button
@@ -163,7 +240,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
                 : "text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
             )}
           >
-            <span>Zeno Hubs</span>
+            <span>{t("sidebar.zeno_hubs")}</span>
             {filters.showZenoHubs ? <CheckCircle2 className="size-3" /> : <Circle className="size-3" />}
           </button>
         </div>
@@ -171,10 +248,10 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
 
       <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06]">
         <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2">
-          Bike Status
+          {t("sidebar.bike_status")}
         </p>
         <div className="flex flex-wrap gap-1.5">
-          {STATUS_FILTERS.map(({ value, label }) => {
+          {STATUS_FILTERS(t).map(({ value, label }) => {
             const isActive = activeStatus === value;
             return (
               <button
@@ -197,38 +274,41 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
       <div className="px-4 py-2 flex items-center gap-1.5 border-b border-black/[0.04] dark:border-white/[0.04]">
         <Users className="size-3 text-foreground/30" />
         <span className="text-[10px] text-foreground/35">
-          {filtered.length} driver{filtered.length !== 1 ? "s" : ""}
+          {t("sidebar.driver_count", { count: filtered.length })}
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-foreground/30">
             <Users className="size-8 mb-2 opacity-30" />
-            <p className="text-xs">No drivers found</p>
+            <p className="text-xs">{t("sidebar.no_drivers")}</p>
           </div>
         ) : (
-          <div className="divide-y divide-black/[0.04] dark:divide-white/[0.03]">
-            {filtered.map((f, idx) => {
+          <Virtuoso
+            data={filtered}
+            className="h-full scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10"
+            itemContent={(idx, f) => {
               const p = f.properties as DriverProperties;
               const id = p.driverUuid ?? `driver-${idx}`;
               const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
               return (
-                <DriverListItem
-                  key={id}
-                  driver={p}
-                  isSelected={selectedId === id}
-                  onClick={() => onSelect(id, [lng, lat])}
-                />
+                <div className="border-b border-black/[0.04] dark:border-white/[0.03]">
+                  <DriverListItem
+                    driver={p}
+                    isSelected={selectedId === id}
+                    onClick={() => onSelect(id, [lng, lat])}
+                  />
+                </div>
               );
-            })}
-          </div>
+            }}
+          />
         )}
       </div>
 
       <div className="px-4 py-3 border-t border-black/[0.05] dark:border-white/[0.06]">
         <p className="text-[9px] text-foreground/20 text-center">
-          Data refreshes every 15s
+          {t("sidebar.refresh_rate")}
         </p>
       </div>
     </aside>
