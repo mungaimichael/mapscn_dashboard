@@ -100,157 +100,46 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="px-4 pt-5 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
-        <div className="flex items-center gap-2.5 mb-4">
-          {/* Close button - Mobile only */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-foreground/30" />
+            <input
+              type="text"
+              name="driver-search"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={t("sidebar.search_placeholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className={cn(
+                "w-full pl-8 pr-3 py-2 rounded-lg text-xs",
+                "bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.08]",
+                "text-foreground/80 placeholder:text-foreground/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40"
+              )}
+            />
+          </div>
+          
+          <button
+            onClick={() => setIsLangOpen(!isLangOpen)}
+            className={cn(
+              "p-2 rounded-lg border transition-colors",
+              "bg-background border-black/[0.08] dark:border-white/[0.08] text-foreground/60",
+              isLangOpen && "border-emerald-500/40 text-emerald-500"
+            )}
+          >
+            <Settings2 className="size-4" />
+          </button>
+
           <button
             onClick={onClose}
-            className="lg:hidden p-1.5 -ml-1 rounded-md text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
+            className="lg:hidden p-2 rounded-lg border border-black/[0.08] dark:border-white/[0.08] text-foreground/60"
           >
             <X className="size-4" />
           </button>
-
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {totalOnline}
-              </span>
-            </div>
-
-            {/* Mobile close handled here, settings moved to dedicated section */}
-          </div>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-foreground/30" />
-          <input
-            type="text"
-            name="driver-search"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder={t("sidebar.search_placeholder")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className={cn(
-              "w-full pl-8 pr-3 py-2 rounded-lg text-xs",
-              "bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.08]",
-              "text-foreground/80 placeholder:text-foreground/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40"
-            )}
-          />
-        </div>
-      </div>
-
-      {/* ── Preferences Section ── */}
-      <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.01]">
-        <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
-          <Settings2 className="size-3" /> Preferences
-        </p>
-        
-        <div className="flex items-center justify-between gap-2">
-          {/* Language Selector */}
-          <div className="relative flex-1">
-            <button
-              type="button"
-              onClick={() => setIsLangOpen(!isLangOpen)}
-              aria-label="Select language"
-              aria-expanded={isLangOpen}
-              aria-haspopup="listbox"
-              className={cn(
-                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors border focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
-                "bg-background border-black/[0.08] dark:border-white/[0.08]",
-                "text-foreground/60 hover:text-foreground/80",
-                isLangOpen && "border-emerald-500/40 ring-1 ring-emerald-500/20"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Globe className="size-3.5 text-emerald-500/60" />
-                <span className="text-[11px] font-medium">
-                  {i18n.language === "en" ? "English" : "Kiswahili"}
-                </span>
-              </div>
-              <ChevronDown className={cn("size-3 transition-transform opacity-40", isLangOpen && "rotate-180")} />
-            </button>
-
-            {isLangOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsLangOpen(false)} />
-                <div className="absolute left-0 bottom-full mb-1.5 w-full py-1 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-background shadow-xl z-20 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                  <button
-                    onClick={() => changeLanguage("en")}
-                    className={cn(
-                      "w-full px-3 py-2 text-left text-[11px] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] flex items-center justify-between",
-                      i18n.language === "en" ? "text-emerald-500 font-bold" : "text-foreground/60"
-                    )}
-                  >
-                    English {i18n.language === "en" && <CheckCircle2 className="size-3" />}
-                  </button>
-                  <button
-                    onClick={() => changeLanguage("sw")}
-                    className={cn(
-                      "w-full px-3 py-2 text-left text-[11px] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] flex items-center justify-between",
-                      i18n.language === "sw" ? "text-emerald-500 font-bold" : "text-foreground/60"
-                    )}
-                  >
-                    Kiswahili {i18n.language === "sw" && <CheckCircle2 className="size-3" />}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Theme Toggle */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-            className={cn(
-              "size-8 shrink-0 rounded-md flex items-center justify-center transition-colors border focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
-              "bg-background border-black/[0.08] dark:border-white/[0.08]",
-              "text-foreground/40 hover:text-emerald-500 hover:border-emerald-500/30"
-            )}
-          >
-            {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-          </button>
-        </div>
-      </div>
-
-      <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06]">
-        <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-          <MapIcon className="size-3" /> {t("sidebar.map_layers")}
-        </p>
-        <div className="space-y-1.5">
-          <button
-            onClick={() => dispatch({ type: "TOGGLE_ARC_HUBS" })}
-            className={cn(
-              "w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors",
-              filters.showArcHubs
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
-            )}
-          >
-            <span>{t("sidebar.arc_hubs")}</span>
-            {filters.showArcHubs ? <CheckCircle2 className="size-3" /> : <Circle className="size-3" />}
-          </button>
-          <button
-            onClick={() => dispatch({ type: "TOGGLE_ZENO_HUBS" })}
-            className={cn(
-              "w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors",
-              filters.showZenoHubs
-                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                : "text-foreground/40 hover:bg-black/5 dark:hover:bg-white/5"
-            )}
-          >
-            <span>{t("sidebar.zeno_hubs")}</span>
-            {filters.showZenoHubs ? <CheckCircle2 className="size-3" /> : <Circle className="size-3" />}
-          </button>
-        </div>
-      </div>
-
-      <div className="px-4 py-3 border-b border-black/[0.05] dark:border-white/[0.06]">
-        <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest mb-2">
-          {t("sidebar.bike_status")}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
+        {/* Horizontal Status Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
           {STATUS_FILTERS(t).map(({ value, label }) => {
             const isActive = activeStatus === value;
             return (
@@ -258,7 +147,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
                 key={value}
                 onClick={() => handleStatusToggle(value)}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[10px] font-medium border transition-all",
+                  "shrink-0 rounded-full px-3 py-1 text-[10px] font-medium border transition-all",
                   isActive
                     ? (value === "ALL" ? "bg-foreground/10 text-foreground/80 border-foreground/15" : ACTIVE_CHIP[value])
                     : "border-transparent bg-black/[0.04] dark:bg-white/[0.05] text-foreground/45 hover:text-foreground/65"
@@ -271,11 +160,71 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
         </div>
       </div>
 
-      <div className="px-4 py-2 flex items-center gap-1.5 border-b border-black/[0.04] dark:border-white/[0.04]">
-        <Users className="size-3 text-foreground/30" />
-        <span className="text-[10px] text-foreground/35">
-          {t("sidebar.driver_count", { count: filtered.length })}
-        </span>
+      {/* ── Collapsible Advanced Settings ── */}
+      <div className={cn(
+        "grid transition-all duration-300 ease-in-out border-b border-black/[0.05] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.01]",
+        isLangOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 border-b-0"
+      )}>
+        <div className="overflow-hidden">
+          <div className="px-4 py-3 space-y-4">
+            <div>
+              <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">Preferences</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => changeLanguage(i18n.language === "en" ? "sw" : "en")}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md border border-black/[0.08] dark:border-white/[0.08] text-[11px] font-medium text-foreground/60"
+                >
+                  <Globe className="size-3.5" /> {i18n.language === "en" ? "English" : "Kiswahili"}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="size-9 flex items-center justify-center rounded-md border border-black/[0.08] dark:border-white/[0.08] text-foreground/60"
+                >
+                  {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">{t("sidebar.map_layers")}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => dispatch({ type: "TOGGLE_ARC_HUBS" })}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-2 rounded-md border text-[10px] transition-colors",
+                    filters.showArcHubs ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" : "border-black/[0.08] dark:border-white/[0.08] text-foreground/40"
+                  )}
+                >
+                  Arc Hubs {filters.showArcHubs && <CheckCircle2 className="size-3" />}
+                </button>
+                <button
+                  onClick={() => dispatch({ type: "TOGGLE_ZENO_HUBS" })}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-2 rounded-md border text-[10px] transition-colors",
+                    filters.showZenoHubs ? "bg-blue-500/10 border-blue-500/20 text-blue-600" : "border-black/[0.08] dark:border-white/[0.08] text-foreground/40"
+                  )}
+                >
+                  Zeno Hubs {filters.showZenoHubs && <CheckCircle2 className="size-3" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-2 flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.04] bg-black/[0.02] dark:bg-white/[0.02]">
+        <div className="flex items-center gap-1.5">
+          <Users className="size-3 text-foreground/30" />
+          <span className="text-[10px] font-bold text-foreground/35 uppercase tracking-wider">
+            {t("sidebar.driver_count", { count: filtered.length })}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {totalOnline} Online
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0">

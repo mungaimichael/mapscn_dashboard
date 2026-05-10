@@ -8,6 +8,7 @@ import { HubsLayer } from "./HubsLayer";
 import { DriverSidebar } from "./sidebar/DriverSidebar";
 import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
 import { useTheme } from "@/hooks/useTheme";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import type { FilterState } from "./DriverClusters";
 import type { DriverStatus, MovingStatus } from "./useMapData";
 
@@ -89,9 +90,11 @@ export function MapDashboard() {
   const { handleViewportChange } = useMapViewport(300);
 
   // All three fetches fire concurrently via React Query
-  const { data: driverData } = useDriverData();
-  const { data: arcHubs } = useArcHubs();
-  const { data: zenoHubs } = useZenoHubs();
+  const { data: driverData, isLoading: isDriversLoading } = useDriverData();
+  const { data: arcHubs, isLoading: isArcLoading } = useArcHubs();
+  const { data: zenoHubs, isLoading: isZenoLoading } = useZenoHubs();
+
+  const isInitialLoading = isDriversLoading && !driverData;
 
   // Fly to driver on sidebar click
   const handleDriverSelect = useCallback(
@@ -122,6 +125,7 @@ export function MapDashboard() {
 
   return (
     <div className="flex h-full w-full overflow-hidden relative">
+      {isInitialLoading && <LoadingScreen />}
       {/* ── Mobile Overlay ── */}
       {isSidebarOpen && (
         <div 

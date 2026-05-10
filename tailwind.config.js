@@ -62,6 +62,16 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        progress: {
+          "0%": { transform: "scaleX(0)" },
+          "50%": { transform: "scaleX(0.7)" },
+          "100%": { transform: "scaleX(1)" },
+        },
+      },
+      animation: {
+        progress: "progress 2s ease-in-out infinite",
+      },
     },
   },
   plugins: [tailwindAnimate],
