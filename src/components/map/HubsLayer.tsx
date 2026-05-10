@@ -8,11 +8,6 @@ import {
 import type { HubGeoJSON, HubProperties } from "./useMapData";
 
 // Battery fill color based on `full` percentage
-function hubColor(full: number): string {
-  if (full >= 60) return "#22c55e"; // green-500
-  if (full >= 30) return "#f59e0b"; // amber-500
-  return "#ef4444"; // red-500
-}
 
 function HubPopupContent({ p }: { p: HubProperties }) {
   const { t } = useTranslation();
@@ -71,16 +66,16 @@ type HubsLayerProps = {
 };
 
 function HubsLayerInner({ data, label = "Hub" }: HubsLayerProps) {
-  const { t } = useTranslation();
   const [selectedHub, setSelectedHub] = useState<HubProperties | null>(null);
   const [popupCoords, setPopupCoords] = useState<[number, number] | null>(null);
 
   const sourceId = useMemo(() => `hubs-source-${label.replace(/\s+/g, "-").toLowerCase()}`, [label]);
 
   const geoJSON = useMemo(() => {
-    if (!data) return { type: "FeatureCollection", features: [] };
+    if (!data) return { type: "FeatureCollection" as const, features: [] };
     return {
       ...data,
+      type: "FeatureCollection" as const,
       features: data.features.map(f => ({
         ...f,
         properties: {

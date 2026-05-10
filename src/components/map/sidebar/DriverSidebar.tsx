@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState } from "react";
 import { Search, Users, Sun, Moon, Map as MapIcon, CheckCircle2, Circle, X, Globe, ChevronDown, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";

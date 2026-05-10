@@ -1930,7 +1930,7 @@ function MapSource({
     } catch (err) {
       // Ignore
     }
-  }, [isLoaded, map, id, isReady, sourceOptions.data]);
+  }, [isLoaded, map, id, isReady, (sourceOptions as any).data]);
 
   return (
     <SourceContext.Provider value={isReady}>
