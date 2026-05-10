@@ -14,8 +14,8 @@ type StatusFilter = DriverStatus | "ALL";
 const STATUS_FILTERS: (t: any) => { value: StatusFilter; label: string }[] = (t) => [
   { value: "ALL", label: t("status.all") },
   { value: "DRIVER_STATUS_ONLINE", label: t("status.online") },
-  { value: "DRIVER_STATUS_ONTRIP", label: t("status.on_trip") },
-  { value: "DRIVER_STATUS_ENROUTE", label: t("status.en_route") },
+  { value: "DRIVER_STATUS_ONTRIP", label: t("status.ontrip") },
+  { value: "DRIVER_STATUS_ENROUTE", label: t("status.enroute") },
   { value: "DRIVER_STATUS_OFFLINE", label: t("status.offline") },
   { value: "UNASSIGNED", label: t("status.unassigned") },
 ];
@@ -95,8 +95,8 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
 
   return (
     <aside className={cn(
-      "flex flex-col h-full w-72 shrink-0 bg-sidebar transition-transform duration-300 ease-in-out z-50",
-      "fixed inset-y-0 left-0 lg:relative lg:translate-x-0",
+      "flex flex-col w-72 shrink-0 bg-sidebar transition-transform duration-300 ease-in-out z-50",
+      "fixed inset-y-0 left-0 h-[100dvh] lg:h-full lg:relative lg:translate-x-0 overscroll-contain",
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="px-4 pt-5 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
@@ -287,7 +287,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
         ) : (
           <Virtuoso
             data={filtered}
-            className="h-full scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10"
+            className="h-full touch-pan-y scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10"
             itemContent={(idx, f) => {
               const p = f.properties as DriverProperties;
               const id = p.driverUuid ?? `driver-${idx}`;
