@@ -6,6 +6,7 @@ import type { MapRef } from "@/components/ui/map";
 import { DriverClusters } from "./DriverClusters";
 import { HubsLayer } from "./HubsLayer";
 import { DriverSidebar } from "./sidebar/DriverSidebar";
+import { MapSummaryBox } from "./MapSummaryBox";
 import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
 import { useTheme } from "@/hooks/useTheme";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
@@ -183,6 +184,8 @@ export function MapDashboard() {
           {filters.showArcHubs ? <HubsLayer data={arcHubs} label="Arc Hub" /> : null}
           {filters.showZenoHubs ? <HubsLayer data={zenoHubs} label="Zeno Hub" /> : null}
         </Map>
+
+        <MapSummaryBox data={driverData} />
       </div>
     </div>
   );

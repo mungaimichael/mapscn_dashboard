@@ -1553,8 +1553,10 @@ type MapClusterLayerProps<
   clusterColors?: [string, string, string];
   /** Point count thresholds for color/size steps: [medium, large] (default: [100, 750]) */
   clusterThresholds?: [number, number];
+  /** Name of the icon image or Mapbox expression to use for unclustered points. If provided, uses a symbol layer. */
+  pointIcon?: string | any[];
   /** Color for unclustered individual points (default: "#3b82f6") */
-  pointColor?: string;
+  pointColor?: string | any[];
   /** Callback when an unclustered point is clicked */
   onPointClick?: (
     feature: GeoJSON.Feature<GeoJSON.Point, P>,
@@ -1578,6 +1580,7 @@ function MapClusterLayer<
   clusterRadius = 50,
   clusterColors = ["#22c55e", "#eab308", "#ef4444"],
   clusterThresholds = [100, 750],
+  pointIcon,
   pointColor = "#3b82f6",
   onPointClick,
   onClusterClick,
@@ -1593,6 +1596,7 @@ function MapClusterLayer<
   const stylePropsRef = useRef({
     clusterColors,
     clusterThresholds,
+    pointIcon,
     pointColor,
   });
 
@@ -1662,16 +1666,22 @@ function MapClusterLayer<
     // Add unclustered point layer
     map.addLayer({
       id: unclusteredLayerId,
-      type: "circle",
+      type: pointIcon ? "symbol" : "circle",
       source: sourceId,
       filter: ["!", ["has", "point_count"]],
-      paint: {
+      layout: pointIcon ? {
+        "icon-image": pointIcon,
+        "icon-size": 1,
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+      } : {},
+      paint: pointIcon ? {} : {
         "circle-color": pointColor,
         "circle-radius": 6, // Slightly larger for visibility
         "circle-stroke-width": 2,
         "circle-stroke-color": "#fff",
       },
-    });
+    } as any);
 
     // Add a larger transparent hit layer for easier clicking
     const hitLayerId = `${unclusteredLayerId}-hit`;
@@ -1748,12 +1758,17 @@ function MapClusterLayer<
       ]);
     }
 
-    // Update unclustered point layer color
-    if (map.getLayer(unclusteredLayerId) && prev.pointColor !== pointColor) {
-      map.setPaintProperty(unclusteredLayerId, "circle-color", pointColor);
+    // Update unclustered point layer color and icon
+    if (map.getLayer(unclusteredLayerId)) {
+      if (!pointIcon && prev.pointColor !== pointColor) {
+        map.setPaintProperty(unclusteredLayerId, "circle-color", pointColor);
+      }
+      if (pointIcon && prev.pointIcon !== pointIcon) {
+        map.setLayoutProperty(unclusteredLayerId, "icon-image", pointIcon);
+      }
     }
 
-    stylePropsRef.current = { clusterColors, clusterThresholds, pointColor };
+    stylePropsRef.current = { clusterColors, clusterThresholds, pointIcon, pointColor };
   }, [
     isLoaded,
     map,
