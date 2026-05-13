@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback, useEffect } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Copy, Check } from "lucide-react";
 import { MapClusterLayer, MapPopup } from "@/components/ui/map";
@@ -125,8 +125,8 @@ type DriverClustersProps = {
 };
 
 function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps) {
-  const [popupFeature, setPopupFeature] = useState<GeoJSON.Feature | null>(null);
-  const [popupCoords, setPopupCoords] = useState<[number, number] | null>(null);
+  const [prevSelectedId, setPrevSelectedId] = useState<string | null>(null);
+  const [popupData, setPopupData] = useState<{feature: GeoJSON.Feature, coords: [number, number]} | null>(null);
 
   // Derive filtered data during render — no useEffect needed
   const filteredData = useMemo(
@@ -134,37 +134,36 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
     [data, filters]
   );
 
-  // Automatically show popup when a driver is selected from sidebar
-  useEffect(() => {
-    if (!selectedId || !data) {
-      setPopupFeature(null);
-      setPopupCoords(null);
-      return;
+  // Vercel Best Practice: Adjusting state during render (avoids double render cycle from useEffect)
+  if (selectedId !== prevSelectedId) {
+    setPrevSelectedId(selectedId ?? null);
+    
+    if (selectedId && data) {
+      const feature = data.features.find(
+        (f) => (f.properties as DriverProperties).driverUuid === selectedId
+      );
+      if (feature) {
+        setPopupData({
+          feature,
+          coords: (feature.geometry as GeoJSON.Point).coordinates as [number, number]
+        });
+      } else {
+        setPopupData(null);
+      }
+    } else {
+      setPopupData(null);
     }
-
-    const feature = data.features.find(
-      (f) => (f.properties as DriverProperties).driverUuid === selectedId
-    );
-
-    if (feature) {
-      setPopupFeature(feature);
-      setPopupCoords((feature.geometry as GeoJSON.Point).coordinates as [number, number]);
-    }
-  }, [selectedId, data]);
+  }
 
   const handlePointClick = useCallback(
     (feature: GeoJSON.Feature, coords: [number, number]) => {
-      // If clicking a point, we might want to update the selected ID in parent as well
-      // But for now just show the local popup
-      setPopupFeature(feature);
-      setPopupCoords(coords);
+      setPopupData({ feature, coords });
     },
     []
   );
 
   const handleClosePopup = useCallback(() => {
-    setPopupFeature(null);
-    setPopupCoords(null);
+    setPopupData(null);
   }, []);
 
   // We count how many bikes in each cluster have specific statuses
@@ -187,17 +186,17 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
         onPointClick={handlePointClick}
       />
 
-      {popupFeature && popupCoords && (
+      {popupData && (
         <MapPopup
-          longitude={popupCoords[0]}
-          latitude={popupCoords[1]}
+          longitude={popupData.coords[0]}
+          latitude={popupData.coords[1]}
           onClose={handleClosePopup}
           closeButton={false}
           closeOnClick={true}
           closeOnMove={false}
         >
           <div className="animate-in fade-in-0 zoom-in-95 duration-200 ease-out">
-            <DriverPopupContent feature={popupFeature} />
+            <DriverPopupContent feature={popupData.feature} />
           </div>
         </MapPopup>
       )}

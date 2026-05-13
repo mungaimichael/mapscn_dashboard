@@ -125,14 +125,14 @@ export function MapDashboard() {
 
   return (
     <div className="flex h-full w-full overflow-hidden relative">
-      {isInitialLoading && <LoadingScreen />}
+      {isInitialLoading ? <LoadingScreen /> : null}
       {/* ── Mobile Overlay ── */}
-      {isSidebarOpen && (
+      {isSidebarOpen ? (
         <div 
           className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
-      )}
+      ) : null}
 
       {/* ── Sidebar ── */}
       <DriverSidebar
@@ -180,8 +180,8 @@ export function MapDashboard() {
             selectedId={selectedDriverId}
           />
 
-          {filters.showArcHubs && <HubsLayer data={arcHubs} label="Arc Hub" />}
-          {filters.showZenoHubs && <HubsLayer data={zenoHubs} label="Zeno Hub" />}
+          {filters.showArcHubs ? <HubsLayer data={arcHubs} label="Arc Hub" /> : null}
+          {filters.showZenoHubs ? <HubsLayer data={zenoHubs} label="Zeno Hub" /> : null}
         </Map>
       </div>
     </div>
