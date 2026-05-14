@@ -1,12 +1,13 @@
 import { useState, useCallback, useReducer, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Users } from "lucide-react";
+import { Users, Box } from "lucide-react";
 import { Map, MapControls } from "@/components/ui/map";
 import type { MapRef } from "@/components/ui/map";
 import { DriverClusters } from "./DriverClusters";
 import { HubsLayer } from "./HubsLayer";
 import { DriverSidebar } from "./sidebar/DriverSidebar";
 import { MapSummaryBox } from "./MapSummaryBox";
+import { Map3DBuildings } from "./Map3DBuildings";
 import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
 import { useTheme } from "@/hooks/useTheme";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
@@ -84,6 +85,7 @@ export function MapDashboard() {
   const [filters, dispatch] = useReducer(filterReducer, DEFAULT_FILTERS);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [is3DMode, setIs3DMode] = useState(false);
   const mapRef = useRef<MapRef>(null);
   const { theme } = useTheme();
 
@@ -164,6 +166,22 @@ export function MapDashboard() {
           <Users className="size-5" />
         </button>
 
+        {/* 3D Mode Toggle Button */}
+        <button
+          onClick={() => setIs3DMode((prev) => !prev)}
+          aria-label="Toggle 3D Buildings"
+          title="Toggle 3D Buildings"
+          className={cn(
+            "absolute top-4 right-4 z-30 size-10 rounded-full",
+            "border shadow-lg flex items-center justify-center transition-all active:scale-95",
+            is3DMode 
+              ? "bg-primary text-primary-foreground border-primary" 
+              : "bg-background text-foreground/70 border-border hover:text-foreground"
+          )}
+        >
+          <Box className="size-5" />
+        </button>
+
         <Map
           ref={mapRef}
           center={INITIAL_CENTER}
@@ -174,6 +192,7 @@ export function MapDashboard() {
           onViewportChange={handleViewportChange}
         >
           <MapControls position="bottom-right" showZoom showCompass showFullscreen />
+          <Map3DBuildings enabled={is3DMode} />
 
           <DriverClusters
             data={driverData}

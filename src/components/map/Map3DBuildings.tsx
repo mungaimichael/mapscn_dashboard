@@ -1,16 +1,25 @@
 import { useEffect, memo } from "react";
 import { useMap } from "@/components/ui/map";
 
-function Map3DBuildingsInner() {
+type Map3DBuildingsProps = {
+  enabled?: boolean;
+};
+
+function Map3DBuildingsInner({ enabled = true }: Map3DBuildingsProps) {
   const { map, isLoaded } = useMap();
 
   useEffect(() => {
     if (!map || !isLoaded) return;
 
-    const sourceId = "openfreemap";
     const layerId = "3d-buildings";
 
-    console.log("Map3DBuildings: Initializing...");
+    if (!enabled) {
+      if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+      map.easeTo({ pitch: 0, bearing: 0, duration: 1000 });
+      return;
+    }
 
     // Force a 3D perspective
     map.easeTo({
@@ -22,72 +31,57 @@ function Map3DBuildingsInner() {
 
     const setupLayer = () => {
       try {
-        // 1. Add Source using direct Tile URL for maximum compatibility
-        if (!map.getSource(sourceId)) {
-          console.log("Map3DBuildings: Adding source...");
-          map.addSource(sourceId, {
-            type: "vector",
-            // Using the direct planet URL which contains the building layer
-            url: "https://tiles.openfreemap.org/planet"
-          });
-        }
+        // The base map style from Carto already provides a source named 'carto'
+        const sourceId = "carto";
 
-        // 2. Add Layer
+        // 2. Add Layer beneath symbols
         if (!map.getLayer(layerId)) {
-          console.log("Map3DBuildings: Adding layer...");
+          const layers = map.getStyle().layers;
+          let labelLayerId;
+          for (let i = 0; i < layers.length; i++) {
+            if (layers[i].type === 'symbol' && layers[i].layout && (layers[i].layout as any)['text-field']) {
+              labelLayerId = layers[i].id;
+              break;
+            }
+          }
           
           map.addLayer({
             id: layerId,
             source: sourceId,
             "source-layer": "building",
             type: "fill-extrusion",
-            minzoom: 13, // Show even earlier for debugging
+            minzoom: 14,
             paint: {
               "fill-extrusion-color": [
                 "interpolate",
                 ["linear"],
-                ["get", "render_height"],
+                ["coalesce", ["get", "render_height"], 10],
                 0, "lightgray",
                 200, "royalblue",
                 400, "lightblue"
               ],
-              "fill-extrusion-height": [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                13, 0,
-                16, ["get", "render_height"]
-              ],
-              "fill-extrusion-base": [
-                "case",
-                [">=", ["zoom"], 16],
-                ["get", "render_min_height"],
-                0
-              ],
-              "fill-extrusion-opacity": 1.0 // Fully opaque for visibility
+              "fill-extrusion-height": ["coalesce", ["get", "render_height"], 15],
+              "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+              "fill-extrusion-opacity": 0.8
             }
-          });
-          console.log("Map3DBuildings: Layer added successfully.");
+          }, labelLayerId);
         }
       } catch (err) {
         console.error("Map3DBuildings Error:", err);
       }
     };
 
-    // Run setup
     if (map.isStyleLoaded()) {
       setupLayer();
     } else {
       map.once("styledata", setupLayer);
     }
-
+    
     return () => {
-      console.log("Map3DBuildings: Cleaning up...");
+      // Remove layer if component unmounts
       if (map.getLayer(layerId)) map.removeLayer(layerId);
-      if (map.getSource(sourceId)) map.removeSource(sourceId);
-      map.easeTo({ pitch: 0, duration: 500 });
     };
-  }, [map, isLoaded]);
+  }, [map, isLoaded, enabled]);
 
   return null;
 }
