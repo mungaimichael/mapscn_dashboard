@@ -28,6 +28,13 @@ const STATUS_COLORS: Record<string, string> = {
   DEFAULT: "#60a5fa", // blue-400
 };
 
+// Static MapLibre cluster aggregation expressions — hoisted to avoid useMemo overhead
+const CLUSTER_PROPERTIES = {
+  online_count: ["+", ["case", ["==", ["get", "status"], "DRIVER_STATUS_ONLINE"], 1, 0]],
+  on_trip_count: ["+", ["case", ["==", ["get", "status"], "DRIVER_STATUS_ONTRIP"], 1, 0]],
+  low_battery_count: ["+", ["case", ["<", ["get", "Battery"], 30], 1, 0]],
+} as const;
+
 function applyFilters(
   data: DriverGeoJSON | undefined,
   filters: FilterState
@@ -198,11 +205,7 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
   }, []);
 
   // We count how many bikes in each cluster have specific statuses
-  const clusterProperties = useMemo(() => ({
-    online_count: ["+", ["case", ["==", ["get", "status"], "DRIVER_STATUS_ONLINE"], 1, 0]],
-    on_trip_count: ["+", ["case", ["==", ["get", "status"], "DRIVER_STATUS_ONTRIP"], 1, 0]],
-    low_battery_count: ["+", ["case", ["<", ["get", "Battery"], 30], 1, 0]],
-  }), []);
+  // (CLUSTER_PROPERTIES is hoisted to module level — stable reference)
 
   return (
     <>
@@ -210,7 +213,7 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
         data={filteredData}
         clusterMaxZoom={14}
         clusterRadius={50}
-        clusterProperties={clusterProperties}
+        clusterProperties={CLUSTER_PROPERTIES}
         clusterColors={["#51bbd6", "#f1f075", "#f28cb1"]}
         clusterThresholds={[100, 750]}
         pointIcon={[
