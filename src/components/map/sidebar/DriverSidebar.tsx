@@ -11,13 +11,13 @@ import type { FilterAction } from "../MapDashboard";
 
 type StatusFilter = DriverStatus | "ALL";
 
-const STATUS_FILTERS: (t: any) => { value: StatusFilter; label: string }[] = (t) => [
-  { value: "ALL", label: t("status.all") },
-  { value: "DRIVER_STATUS_ONLINE", label: t("status.online") },
-  { value: "DRIVER_STATUS_ONTRIP", label: t("status.ontrip") },
-  { value: "DRIVER_STATUS_ENROUTE", label: t("status.enroute") },
-  { value: "DRIVER_STATUS_OFFLINE", label: t("status.offline") },
-  { value: "UNASSIGNED", label: t("status.unassigned") },
+const STATUS_FILTER_VALUES: StatusFilter[] = [
+  "ALL",
+  "DRIVER_STATUS_ONLINE",
+  "DRIVER_STATUS_ONTRIP",
+  "DRIVER_STATUS_ENROUTE",
+  "DRIVER_STATUS_OFFLINE",
+  "UNASSIGNED",
 ];
 
 // Active chip colors per status
@@ -50,6 +50,12 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
   const [isLangOpen, setIsLangOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { t, i18n } = useTranslation();
+
+  // Memoize filter labels — rebuilds only when t() reference changes (i.e. language switch)
+  const statusFilters = useMemo(() => STATUS_FILTER_VALUES.map((value) => ({
+    value,
+    label: t(`status.${value === "ALL" ? "all" : value.replace("DRIVER_STATUS_", "").toLowerCase()}`),
+  })), [t]);
 
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang);
@@ -140,7 +146,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
 
         {/* Horizontal Status Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-          {STATUS_FILTERS(t).map(({ value, label }) => {
+          {statusFilters.map(({ value, label }) => {
             const isActive = activeStatus === value;
             return (
               <button
