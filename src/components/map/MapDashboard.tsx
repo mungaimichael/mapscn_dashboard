@@ -126,6 +126,9 @@ export function MapDashboard() {
     []
   );
 
+  const handleCloseSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  const handleToggle3D = useCallback(() => setIs3DMode((prev) => !prev), []);
+
   return (
     <div className="flex h-full w-full overflow-hidden relative">
       {isInitialLoading ? <LoadingScreen /> : null}
@@ -133,7 +136,7 @@ export function MapDashboard() {
       {isSidebarOpen ? (
         <div 
           className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={handleCloseSidebar}
         />
       ) : null}
 
@@ -145,7 +148,7 @@ export function MapDashboard() {
         filters={filters}
         dispatch={dispatch}
         isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
+        onClose={handleCloseSidebar}
       />
 
       {/* ── Desktop Divider ── */}
@@ -168,7 +171,7 @@ export function MapDashboard() {
 
         {/* 3D Mode Toggle Button */}
         <button
-          onClick={() => setIs3DMode((prev) => !prev)}
+          onClick={handleToggle3D}
           aria-label="Toggle 3D Buildings"
           title="Toggle 3D Buildings"
           className={cn(

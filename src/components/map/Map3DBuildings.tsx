@@ -37,13 +37,9 @@ function Map3DBuildingsInner({ enabled = true }: Map3DBuildingsProps) {
         // 2. Add Layer beneath symbols
         if (!map.getLayer(layerId)) {
           const layers = map.getStyle().layers;
-          let labelLayerId;
-          for (let i = 0; i < layers.length; i++) {
-            if (layers[i].type === 'symbol' && layers[i].layout && (layers[i].layout as any)['text-field']) {
-              labelLayerId = layers[i].id;
-              break;
-            }
-          }
+          const labelLayerId = layers.find(
+            (l) => l.type === 'symbol' && 'text-field' in ((l as { layout?: Record<string, unknown> }).layout ?? {})
+          )?.id;
           
           map.addLayer({
             id: layerId,
