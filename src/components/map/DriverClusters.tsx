@@ -1,7 +1,7 @@
 import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Copy, Check } from "lucide-react";
-import { MapClusterLayer, MapPopup } from "@/components/ui/map";
+import { MapClusterLayer, MapPopup, useMap } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
 import type { DriverGeoJSON, DriverProperties, DriverStatus, MovingStatus, BikeMake } from "./useMapData";
 
@@ -11,6 +11,21 @@ export type FilterState = {
   bikeMakes: BikeMake[];
   showArcHubs: boolean;
   showZenoHubs: boolean;
+};
+
+const getCursorSvg = (color: string) => `
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"></path>
+</svg>
+`;
+
+const STATUS_COLORS: Record<string, string> = {
+  DRIVER_STATUS_ONLINE: "#34d399", // emerald-400
+  DRIVER_STATUS_ONTRIP: "#60a5fa", // blue-400
+  DRIVER_STATUS_ENROUTE: "#a78bfa", // violet-400
+  DRIVER_STATUS_OFFLINE: "#71717a", // zinc-500
+  UNASSIGNED: "#fbbf24", // amber-400
+  DEFAULT: "#60a5fa", // blue-400
 };
 
 function applyFilters(
@@ -125,8 +140,24 @@ type DriverClustersProps = {
 };
 
 function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps) {
-  const [popupFeature, setPopupFeature] = useState<GeoJSON.Feature | null>(null);
-  const [popupCoords, setPopupCoords] = useState<[number, number] | null>(null);
+  const { map, isLoaded } = useMap();
+  const [prevSelectedId, setPrevSelectedId] = useState<string | null>(null);
+
+  // Load custom colored cursor icons for unclustered points
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+    Object.entries(STATUS_COLORS).forEach(([status, color]) => {
+      const id = `cursor-${status}`;
+      if (!map.hasImage(id)) {
+        const img = new Image(24, 24);
+        img.onload = () => {
+          if (!map.hasImage(id)) map.addImage(id, img);
+        };
+        img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(getCursorSvg(color))}`;
+      }
+    });
+  }, [isLoaded, map]);
+  const [popupData, setPopupData] = useState<{feature: GeoJSON.Feature, coords: [number, number]} | null>(null);
 
   // Derive filtered data during render — no useEffect needed
   const filteredData = useMemo(
@@ -134,37 +165,36 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
     [data, filters]
   );
 
-  // Automatically show popup when a driver is selected from sidebar
-  useEffect(() => {
-    if (!selectedId || !data) {
-      setPopupFeature(null);
-      setPopupCoords(null);
-      return;
+  // Vercel Best Practice: Adjusting state during render (avoids double render cycle from useEffect)
+  if (selectedId !== prevSelectedId) {
+    setPrevSelectedId(selectedId ?? null);
+    
+    if (selectedId && data) {
+      const feature = data.features.find(
+        (f) => (f.properties as DriverProperties).driverUuid === selectedId
+      );
+      if (feature) {
+        setPopupData({
+          feature,
+          coords: (feature.geometry as GeoJSON.Point).coordinates as [number, number]
+        });
+      } else {
+        setPopupData(null);
+      }
+    } else {
+      setPopupData(null);
     }
-
-    const feature = data.features.find(
-      (f) => (f.properties as DriverProperties).driverUuid === selectedId
-    );
-
-    if (feature) {
-      setPopupFeature(feature);
-      setPopupCoords((feature.geometry as GeoJSON.Point).coordinates as [number, number]);
-    }
-  }, [selectedId, data]);
+  }
 
   const handlePointClick = useCallback(
     (feature: GeoJSON.Feature, coords: [number, number]) => {
-      // If clicking a point, we might want to update the selected ID in parent as well
-      // But for now just show the local popup
-      setPopupFeature(feature);
-      setPopupCoords(coords);
+      setPopupData({ feature, coords });
     },
     []
   );
 
   const handleClosePopup = useCallback(() => {
-    setPopupFeature(null);
-    setPopupCoords(null);
+    setPopupData(null);
   }, []);
 
   // We count how many bikes in each cluster have specific statuses
@@ -183,21 +213,30 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
         clusterProperties={clusterProperties}
         clusterColors={["#51bbd6", "#f1f075", "#f28cb1"]}
         clusterThresholds={[100, 750]}
-        pointColor="#3b82f6"
+        pointIcon={[
+          "match",
+          ["get", "status"],
+          "DRIVER_STATUS_ONLINE", "cursor-DRIVER_STATUS_ONLINE",
+          "DRIVER_STATUS_ONTRIP", "cursor-DRIVER_STATUS_ONTRIP",
+          "DRIVER_STATUS_ENROUTE", "cursor-DRIVER_STATUS_ENROUTE",
+          "DRIVER_STATUS_OFFLINE", "cursor-DRIVER_STATUS_OFFLINE",
+          "UNASSIGNED", "cursor-UNASSIGNED",
+          "cursor-DEFAULT"
+        ]}
         onPointClick={handlePointClick}
       />
 
-      {popupFeature && popupCoords && (
+      {popupData && (
         <MapPopup
-          longitude={popupCoords[0]}
-          latitude={popupCoords[1]}
+          longitude={popupData.coords[0]}
+          latitude={popupData.coords[1]}
           onClose={handleClosePopup}
           closeButton={false}
           closeOnClick={true}
           closeOnMove={false}
         >
           <div className="animate-in fade-in-0 zoom-in-95 duration-200 ease-out">
-            <DriverPopupContent feature={popupFeature} />
+            <DriverPopupContent feature={popupData.feature} />
           </div>
         </MapPopup>
       )}
