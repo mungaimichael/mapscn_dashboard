@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Copy, Check } from "lucide-react";
 import { MapClusterLayer, MapPopup, useMap } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
+import { useFilterStore, useMapUIStore } from "@/store";
 import type { DriverGeoJSON, DriverProperties, DriverStatus, MovingStatus, BikeMake } from "./useMapData";
 
-export type FilterState = {
+type FilterState = {
   statuses: DriverStatus[];
   movingStatuses: MovingStatus[];
   bikeMakes: BikeMake[];
@@ -142,13 +143,18 @@ function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
 
 type DriverClustersProps = {
   data: DriverGeoJSON | undefined;
-  filters: FilterState;
-  selectedId?: string | null;
 };
 
-function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps) {
+function DriverClustersInner({ data }: DriverClustersProps) {
   const { map, isLoaded } = useMap();
   const [prevSelectedId, setPrevSelectedId] = useState<string | null>(null);
+
+  const statuses = useFilterStore((s) => s.statuses);
+  const movingStatuses = useFilterStore((s) => s.movingStatuses);
+  const bikeMakes = useFilterStore((s) => s.bikeMakes);
+  const showArcHubs = useFilterStore((s) => s.showArcHubs);
+  const showZenoHubs = useFilterStore((s) => s.showZenoHubs);
+  const selectedId = useMapUIStore((s) => s.selectedDriverId);
 
   // Load custom colored cursor icons for unclustered points
   useEffect(() => {
@@ -166,10 +172,9 @@ function DriverClustersInner({ data, filters, selectedId }: DriverClustersProps)
   }, [isLoaded, map]);
   const [popupData, setPopupData] = useState<{feature: GeoJSON.Feature, coords: [number, number]} | null>(null);
 
-  // Derive filtered data during render — no useEffect needed
   const filteredData = useMemo(
-    () => applyFilters(data, filters),
-    [data, filters]
+    () => applyFilters(data, { statuses, movingStatuses, bikeMakes, showArcHubs, showZenoHubs }),
+    [data, statuses, movingStatuses, bikeMakes, showArcHubs, showZenoHubs]
   );
 
   // Vercel Best Practice: Adjusting state during render (avoids double render cycle from useEffect)
