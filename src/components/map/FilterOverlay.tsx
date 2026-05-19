@@ -1,6 +1,6 @@
 import { memo } from "react";
+import { useFilterStore } from "@/store";
 import type { DriverStatus, MovingStatus } from "./useMapData";
-import type { FilterState } from "./DriverClusters";
 
 const ALL_STATUSES: { value: DriverStatus; label: string }[] = [
   { value: "DRIVER_STATUS_ONLINE", label: "Online" },
@@ -44,43 +44,40 @@ function ChipButton({
 }
 
 type FilterOverlayProps = {
-  filters: FilterState;
-  onToggleStatus: (s: DriverStatus) => void;
-  onToggleMoving: (m: MovingStatus) => void;
   driverCount: number;
 };
 
-function FilterOverlayInner({
-  filters,
-  onToggleStatus,
-  onToggleMoving,
-  driverCount,
-}: FilterOverlayProps) {
+function FilterOverlayInner({ driverCount }: FilterOverlayProps) {
+  // ── Store slices — no props needed ────────────────────────────────────
+  const statuses = useFilterStore((s) => s.statuses);
+  const movingStatuses = useFilterStore((s) => s.movingStatuses);
+  const toggleStatus = useFilterStore((s) => s.toggleStatus);
+  const toggleMoving = useFilterStore((s) => s.toggleMoving);
+
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 p-3">
-      
       <div className="pointer-events-auto flex flex-wrap gap-1.5 rounded-xl border border-border/60 bg-background/90 backdrop-blur-sm p-2 shadow-sm">
         <span className="self-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pr-1">
           Status
         </span>
         {ALL_STATUSES.map(({ value, label }) => {
-          const isActive = filters.statuses.includes(value);
+          const isActive = statuses.includes(value);
           const activeClass =
             value === "DRIVER_STATUS_ONLINE"
               ? "border-transparent bg-green-500 text-white"
               : value === "DRIVER_STATUS_ONTRIP"
-              ? "border-transparent bg-blue-500 text-white"
-              : value === "DRIVER_STATUS_ENROUTE"
-              ? "border-transparent bg-purple-500 text-white"
-              : value === "DRIVER_STATUS_OFFLINE"
-              ? "border-transparent bg-zinc-500 text-white"
-              : "border-transparent bg-amber-500 text-white";
+                ? "border-transparent bg-blue-500 text-white"
+                : value === "DRIVER_STATUS_ENROUTE"
+                  ? "border-transparent bg-purple-500 text-white"
+                  : value === "DRIVER_STATUS_OFFLINE"
+                    ? "border-transparent bg-zinc-500 text-white"
+                    : "border-transparent bg-amber-500 text-white";
 
           return (
             <ChipButton
               key={value}
               active={isActive}
-              onClick={() => onToggleStatus(value)}
+              onClick={() => toggleStatus(value)}
               activeClass={activeClass}
             >
               {label}
@@ -89,14 +86,13 @@ function FilterOverlayInner({
         })}
       </div>
 
-      
       <div className="pointer-events-auto flex flex-col items-end gap-2">
         <div className="flex gap-1.5 rounded-xl border border-border/60 bg-background/90 backdrop-blur-sm p-2 shadow-sm">
           {ALL_MOVING.map(({ value, label }) => (
             <ChipButton
               key={value}
-              active={filters.movingStatuses.includes(value)}
-              onClick={() => onToggleMoving(value)}
+              active={movingStatuses.includes(value)}
+              onClick={() => toggleMoving(value)}
             >
               {label}
             </ChipButton>

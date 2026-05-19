@@ -4,20 +4,18 @@ import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";
 import { cn } from "@/lib/utils";
 import { DriverListItem } from "./DriverListItem";
-import { useTheme } from "@/hooks/useTheme";
+import { useThemeStore, useMapUIStore, useFilterStore } from "@/store";
 import type { DriverGeoJSON, DriverProperties, DriverStatus } from "@/components/map/useMapData";
-import type { FilterState } from "../DriverClusters";
-import type { FilterAction } from "../MapDashboard";
 
 type StatusFilter = DriverStatus | "ALL";
 
-const STATUS_FILTERS: (t: any) => { value: StatusFilter; label: string }[] = (t) => [
-  { value: "ALL", label: t("status.all") },
-  { value: "DRIVER_STATUS_ONLINE", label: t("status.online") },
-  { value: "DRIVER_STATUS_ONTRIP", label: t("status.ontrip") },
-  { value: "DRIVER_STATUS_ENROUTE", label: t("status.enroute") },
-  { value: "DRIVER_STATUS_OFFLINE", label: t("status.offline") },
-  { value: "UNASSIGNED", label: t("status.unassigned") },
+const STATUS_FILTER_VALUES: StatusFilter[] = [
+  "ALL",
+  "DRIVER_STATUS_ONLINE",
+  "DRIVER_STATUS_ONTRIP",
+  "DRIVER_STATUS_ENROUTE",
+  "DRIVER_STATUS_OFFLINE",
+  "UNASSIGNED",
 ];
 
 // Active chip colors per status
@@ -36,36 +34,52 @@ const ACTIVE_CHIP: Partial<Record<StatusFilter, string>> = {
 
 type DriverSidebarProps = {
   data: DriverGeoJSON | undefined;
-  selectedId: string | null;
   onSelect: (id: string, coords: [number, number]) => void;
-  filters: FilterState;
-  dispatch: React.Dispatch<FilterAction>;
-  isOpen?: boolean;
-  onClose?: () => void;
 };
 
-function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isOpen, onClose }: DriverSidebarProps) {
+function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("ALL");
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  const isSidebarOpen = useMapUIStore((s) => s.isSidebarOpen);
+  const closeSidebar = useMapUIStore((s) => s.closeSidebar);
+  const selectedDriverId = useMapUIStore((s) => s.selectedDriverId);
+  const showArcHubs = useFilterStore((s) => s.showArcHubs);
+  const showZenoHubs = useFilterStore((s) => s.showZenoHubs);
+  const toggleArcHubs = useFilterStore((s) => s.toggleArcHubs);
+  const toggleZenoHubs = useFilterStore((s) => s.toggleZenoHubs);
+  const setStatusFilter = useFilterStore((s) => s.setStatusFilter);
+
   const { t, i18n } = useTranslation();
+
+  // Memoize filter labels — rebuilds only when t() reference changes (language switch)
+  const statusFilters = useMemo(
+    () =>
+      STATUS_FILTER_VALUES.map((value) => ({
+        value,
+        label: t(
+          `status.${value === "ALL" ? "all" : value.replace("DRIVER_STATUS_", "").toLowerCase()}`,
+        ),
+      })),
+    [t],
+  );
 
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang);
     setIsLangOpen(false);
   };
 
-
   const filtered = useMemo(() => {
     const features = data?.features ?? [];
     return features.filter((f) => {
       const p = f.properties as DriverProperties;
-      // Skip drivers without valid coordinates — they can't be shown on the map
+      // Skip drivers without valid coordinates
       const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
       if (lng == null || lat == null) return false;
-      const matchesStatus =
-        activeStatus === "ALL" || p.status === activeStatus;
+      const matchesStatus = activeStatus === "ALL" || p.status === activeStatus;
       const q = query.toLowerCase();
       const matchesQuery =
         !q ||
@@ -85,20 +99,22 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
           s === "DRIVER_STATUS_ENROUTE"
         );
       }).length,
-    [data]
+    [data],
   );
 
   const handleStatusToggle = (status: StatusFilter) => {
     setActiveStatus(status);
-    dispatch({ type: "SET_STATUS_FILTER", status: status === "ALL" ? null : status });
+    setStatusFilter(status === "ALL" ? null : status);
   };
 
   return (
-    <aside className={cn(
-      "flex flex-col w-72 shrink-0 bg-sidebar transition-transform duration-300 ease-in-out z-50",
-      "fixed inset-y-0 left-0 h-[100dvh] lg:h-full lg:relative lg:translate-x-0 overscroll-contain",
-      isOpen ? "translate-x-0" : "-translate-x-full"
-    )}>
+    <aside
+      className={cn(
+        "flex flex-col w-72 shrink-0 bg-sidebar transition-transform duration-300 ease-in-out z-50",
+        "fixed inset-y-0 left-0 h-[100dvh] lg:h-full lg:relative lg:translate-x-0 overscroll-contain",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+      )}
+    >
       <div className="px-4 pt-5 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
         <div className="flex items-center gap-2 mb-4">
           <div className="relative flex-1">
@@ -114,24 +130,24 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
               className={cn(
                 "w-full pl-8 pr-3 py-2 rounded-lg text-xs",
                 "bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.08]",
-                "text-foreground/80 placeholder:text-foreground/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40"
+                "text-foreground/80 placeholder:text-foreground/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40",
               )}
             />
           </div>
-          
+
           <button
             onClick={() => setIsLangOpen(!isLangOpen)}
             className={cn(
               "p-2 rounded-lg border transition-colors",
               "bg-background border-black/[0.08] dark:border-white/[0.08] text-foreground/60",
-              isLangOpen && "border-emerald-500/40 text-emerald-500"
+              isLangOpen && "border-emerald-500/40 text-emerald-500",
             )}
           >
             <Settings2 className="size-4" />
           </button>
 
           <button
-            onClick={onClose}
+            onClick={closeSidebar}
             className="lg:hidden p-2 rounded-lg border border-black/[0.08] dark:border-white/[0.08] text-foreground/60"
           >
             <X className="size-4" />
@@ -140,7 +156,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
 
         {/* Horizontal Status Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-          {STATUS_FILTERS(t).map(({ value, label }) => {
+          {statusFilters.map(({ value, label }) => {
             const isActive = activeStatus === value;
             return (
               <button
@@ -149,8 +165,10 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
                 className={cn(
                   "shrink-0 rounded-full px-3 py-1 text-[10px] font-medium border transition-all",
                   isActive
-                    ? (value === "ALL" ? "bg-foreground/10 text-foreground/80 border-foreground/15" : ACTIVE_CHIP[value])
-                    : "border-transparent bg-black/[0.04] dark:bg-white/[0.05] text-foreground/45 hover:text-foreground/65"
+                    ? value === "ALL"
+                      ? "bg-foreground/10 text-foreground/80 border-foreground/15"
+                      : ACTIVE_CHIP[value]
+                    : "border-transparent bg-black/[0.04] dark:bg-white/[0.05] text-foreground/45 hover:text-foreground/65",
                 )}
               >
                 {label}
@@ -161,50 +179,65 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
       </div>
 
       {/* ── Collapsible Advanced Settings ── */}
-      <div className={cn(
-        "grid transition-all duration-300 ease-in-out border-b border-black/[0.05] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.01]",
-        isLangOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 border-b-0"
-      )}>
+      <div
+        className={cn(
+          "grid transition-all duration-300 ease-in-out border-b border-black/[0.05] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.01]",
+          isLangOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 border-b-0",
+        )}
+      >
         <div className="overflow-hidden">
           <div className="px-4 py-3 space-y-4">
             <div>
-              <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">Preferences</p>
+              <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">
+                Preferences
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => changeLanguage(i18n.language === "en" ? "sw" : "en")}
                   className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md border border-black/[0.08] dark:border-white/[0.08] text-[11px] font-medium text-foreground/60"
                 >
-                  <Globe className="size-3.5" /> {i18n.language === "en" ? "English" : "Kiswahili"}
+                  <Globe className="size-3.5" />{" "}
+                  {i18n.language === "en" ? "English" : "Kiswahili"}
                 </button>
                 <button
                   onClick={toggleTheme}
                   className="size-9 flex items-center justify-center rounded-md border border-black/[0.08] dark:border-white/[0.08] text-foreground/60"
                 >
-                  {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                  {theme === "dark" ? (
+                    <Sun className="size-3.5" />
+                  ) : (
+                    <Moon className="size-3.5" />
+                  )}
                 </button>
               </div>
             </div>
 
             <div>
-              <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">{t("sidebar.map_layers")}</p>
+              <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">
+                {t("sidebar.map_layers")}
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => dispatch({ type: "TOGGLE_ARC_HUBS" })}
+                  onClick={toggleArcHubs}
                   className={cn(
                     "flex items-center justify-center gap-2 py-2 rounded-md border text-[10px] transition-colors",
-                    filters.showArcHubs ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" : "border-black/[0.08] dark:border-white/[0.08] text-foreground/40"
+                    showArcHubs
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600"
+                      : "border-black/[0.08] dark:border-white/[0.08] text-foreground/40",
                   )}
                 >
-                  Arc Hubs {filters.showArcHubs && <CheckCircle2 className="size-3" />}
+                  Arc Hubs {showArcHubs && <CheckCircle2 className="size-3" />}
                 </button>
                 <button
-                  onClick={() => dispatch({ type: "TOGGLE_ZENO_HUBS" })}
+                  onClick={toggleZenoHubs}
                   className={cn(
                     "flex items-center justify-center gap-2 py-2 rounded-md border text-[10px] transition-colors",
-                    filters.showZenoHubs ? "bg-blue-500/10 border-blue-500/20 text-blue-600" : "border-black/[0.08] dark:border-white/[0.08] text-foreground/40"
+                    showZenoHubs
+                      ? "bg-blue-500/10 border-blue-500/20 text-blue-600"
+                      : "border-black/[0.08] dark:border-white/[0.08] text-foreground/40",
                   )}
                 >
-                  Zeno Hubs {filters.showZenoHubs && <CheckCircle2 className="size-3" />}
+                  Zeno Hubs {showZenoHubs && <CheckCircle2 className="size-3" />}
                 </button>
               </div>
             </div>
@@ -245,7 +278,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
                 <div className="border-b border-black/[0.04] dark:border-white/[0.03]">
                   <DriverListItem
                     driver={p}
-                    isSelected={selectedId === id}
+                    isSelected={selectedDriverId === id}
                     onClick={() => onSelect(id, [lng, lat])}
                   />
                 </div>
