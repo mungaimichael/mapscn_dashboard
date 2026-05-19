@@ -1,4 +1,4 @@
-import { useState, useCallback, useReducer, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Users, Box } from "lucide-react";
 import { Map, MapControls } from "@/components/ui/map";
@@ -9,177 +9,97 @@ import { DriverSidebar } from "./sidebar/DriverSidebar";
 import { MapSummaryBox } from "./MapSummaryBox";
 import { Map3DBuildings } from "./Map3DBuildings";
 import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
-import { useTheme } from "@/hooks/useTheme";
+import { useThemeStore, useMapUIStore, useFilterStore } from "@/store";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
-import type { FilterState } from "./DriverClusters";
-import type { DriverStatus, MovingStatus } from "./useMapData";
 
-// Nairobi center
 const INITIAL_CENTER: [number, number] = [36.82598, -1.29901];
 const INITIAL_ZOOM = 10.5;
 
-const DEFAULT_FILTERS: FilterState = {
-  statuses: [
-    "DRIVER_STATUS_ONLINE",
-    "DRIVER_STATUS_OFFLINE",
-    "DRIVER_STATUS_ONTRIP",
-    "DRIVER_STATUS_ENROUTE",
-    "UNASSIGNED",
-  ],
-  movingStatuses: ["MOVING", "PARKED"],
-  bikeMakes: ["Roam", "One Electric", "KINGCHE ARC", "Roam Air"],
-  showArcHubs: true,
-  showZenoHubs: true,
-};
-
-export type FilterAction =
-  | { type: "TOGGLE_STATUS"; payload: DriverStatus }
-  | { type: "TOGGLE_MOVING"; payload: MovingStatus }
-  | { type: "TOGGLE_ARC_HUBS" }
-  | { type: "TOGGLE_ZENO_HUBS" }
-  | { type: "SET_STATUS_FILTER"; status: DriverStatus | null };
-
-function filterReducer(state: FilterState, action: FilterAction): FilterState {
-  switch (action.type) {
-    case "TOGGLE_STATUS": {
-      const exists = state.statuses.includes(action.payload);
-      return {
-        ...state,
-        statuses: exists
-          ? state.statuses.filter((s) => s !== action.payload)
-          : [...state.statuses, action.payload],
-      };
-    }
-    case "TOGGLE_MOVING": {
-      const exists = state.movingStatuses.includes(action.payload);
-      return {
-        ...state,
-        movingStatuses: exists
-          ? state.movingStatuses.filter((m) => m !== action.payload)
-          : [...state.movingStatuses, action.payload],
-      };
-    }
-    case "TOGGLE_ARC_HUBS":
-      return { ...state, showArcHubs: !state.showArcHubs };
-    case "TOGGLE_ZENO_HUBS":
-      return { ...state, showZenoHubs: !state.showZenoHubs };
-    case "SET_STATUS_FILTER":
-      return {
-        ...state,
-        statuses: action.status
-          ? [action.status]
-          : [
-              "DRIVER_STATUS_ONLINE",
-              "DRIVER_STATUS_OFFLINE",
-              "DRIVER_STATUS_ONTRIP",
-              "DRIVER_STATUS_ENROUTE",
-              "UNASSIGNED",
-            ],
-      };
-    default:
-      return state;
-  }
-}
-
 export function MapDashboard() {
-  const [filters, dispatch] = useReducer(filterReducer, DEFAULT_FILTERS);
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [is3DMode, setIs3DMode] = useState(false);
   const mapRef = useRef<MapRef>(null);
-  const { theme } = useTheme();
 
-  // Debounced viewport tracker — invalidates queries only after map is idle for 300ms
+  const theme = useThemeStore((s) => s.theme);
+  const is3DMode = useMapUIStore((s) => s.is3DMode);
+  const toggle3DMode = useMapUIStore((s) => s.toggle3DMode);
+  const isSidebarOpen = useMapUIStore((s) => s.isSidebarOpen);
+  const openSidebar = useMapUIStore((s) => s.openSidebar);
+  const closeSidebar = useMapUIStore((s) => s.closeSidebar);
+  const toggleSelectedDriver = useMapUIStore((s) => s.toggleSelectedDriver);
+  const showArcHubs = useFilterStore((s) => s.showArcHubs);
+  const showZenoHubs = useFilterStore((s) => s.showZenoHubs);
+
   const { handleViewportChange } = useMapViewport(300);
 
-  // All three fetches fire concurrently via React Query
   const { data: driverData, isLoading: isDriversLoading } = useDriverData();
   const { data: arcHubs } = useArcHubs();
   const { data: zenoHubs } = useZenoHubs();
 
   const isInitialLoading = isDriversLoading && !driverData;
 
-  // Fly to driver on sidebar click
   const handleDriverSelect = useCallback(
     (id: string, coords: [number, number]) => {
-      setSelectedDriverId((prev) => {
-        const isNewSelection = prev !== id;
-        
-        // Only fly if we are selecting a new driver and coordinates are valid
-        if (isNewSelection && coords && coords[0] != null && coords[1] != null) {
-          mapRef.current?.flyTo({
-            center: coords,
-            zoom: 15,
-            duration: 1200,
-            essential: true,
-          });
-          
-          // On mobile, close sidebar when a driver is selected to show the map
-          if (window.innerWidth < 1024) {
-            setIsSidebarOpen(false);
-          }
+      const currentId = useMapUIStore.getState().selectedDriverId;
+      const isNewSelection = currentId !== id;
+
+      toggleSelectedDriver(id);
+
+      if (isNewSelection && coords[0] != null && coords[1] != null) {
+        mapRef.current?.flyTo({
+          center: coords,
+          zoom: 15,
+          duration: 1200,
+          essential: true,
+        });
+
+        if (window.innerWidth < 1024) {
+          closeSidebar();
         }
-
-        return isNewSelection ? id : null;
-      });
+      }
     },
-    []
+    [toggleSelectedDriver, closeSidebar],
   );
-
-  const handleCloseSidebar = useCallback(() => setIsSidebarOpen(false), []);
-  const handleToggle3D = useCallback(() => setIs3DMode((prev) => !prev), []);
 
   return (
     <div className="flex h-full w-full overflow-hidden relative">
       {isInitialLoading ? <LoadingScreen /> : null}
-      {/* ── Mobile Overlay ── */}
+
       {isSidebarOpen ? (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 transition-opacity"
-          onClick={handleCloseSidebar}
+          onClick={closeSidebar}
         />
       ) : null}
 
-      {/* ── Sidebar ── */}
       <DriverSidebar
         data={driverData}
-        selectedId={selectedDriverId}
         onSelect={handleDriverSelect}
-        filters={filters}
-        dispatch={dispatch}
-        isOpen={isSidebarOpen}
-        onClose={handleCloseSidebar}
       />
 
-      {/* ── Desktop Divider ── */}
       <div className="hidden lg:block w-px bg-black/10 dark:bg-white/[0.06] shrink-0" />
 
-      {/* ── Map Content ── */}
       <div className="relative flex-1 overflow-hidden">
-        {/* Mobile Toggle Button */}
         <button
-          onClick={() => setIsSidebarOpen(true)}
+          onClick={openSidebar}
           aria-label="Open sidebar"
           className={cn(
             "lg:hidden absolute top-4 left-4 z-30 size-10 rounded-full",
             "bg-background border border-border shadow-lg flex items-center justify-center",
-            "text-foreground/70 hover:text-foreground transition-transform active:scale-95"
+            "text-foreground/70 hover:text-foreground transition-transform active:scale-95",
           )}
         >
           <Users className="size-5" />
         </button>
 
-        {/* 3D Mode Toggle Button */}
         <button
-          onClick={handleToggle3D}
+          onClick={toggle3DMode}
           aria-label="Toggle 3D Buildings"
           title="Toggle 3D Buildings"
           className={cn(
             "absolute top-4 right-4 z-30 size-10 rounded-full",
             "border shadow-lg flex items-center justify-center transition-all active:scale-95",
-            is3DMode 
-              ? "bg-primary text-primary-foreground border-primary" 
-              : "bg-background text-foreground/70 border-border hover:text-foreground"
+            is3DMode
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background text-foreground/70 border-border hover:text-foreground",
           )}
         >
           <Box className="size-5" />
@@ -197,14 +117,10 @@ export function MapDashboard() {
           <MapControls position="bottom-right" showZoom showCompass showFullscreen />
           <Map3DBuildings enabled={is3DMode} />
 
-          <DriverClusters
-            data={driverData}
-            filters={filters}
-            selectedId={selectedDriverId}
-          />
+          <DriverClusters data={driverData} />
 
-          {filters.showArcHubs ? <HubsLayer data={arcHubs} label="Arc Hub" /> : null}
-          {filters.showZenoHubs ? <HubsLayer data={zenoHubs} label="Zeno Hub" /> : null}
+          {showArcHubs ? <HubsLayer data={arcHubs} label="Arc Hub" /> : null}
+          {showZenoHubs ? <HubsLayer data={zenoHubs} label="Zeno Hub" /> : null}
         </Map>
 
         <MapSummaryBox data={driverData} />
