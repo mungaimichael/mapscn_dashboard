@@ -1,10 +1,39 @@
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Copy, Check } from "lucide-react";
 import { MapClusterLayer, MapPopup, useMap } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
-import { useMapUIStore } from "@/store";
-import type { DriverGeoJSON, DriverProperties } from "./useMapData";
+import { useFilterStore, useMapUIStore } from "@/store";
+import type { BatteryRange, TimestampRange } from "@/store";
+import type { DriverGeoJSON, DriverProperties, DriverStatus, MovingStatus, BikeMake } from "./useMapData";
+
+type FilterState = {
+  statuses: DriverStatus[];
+  movingStatuses: MovingStatus[];
+  bikeMakes: BikeMake[];
+  showArcHubs: boolean;
+  showZenoHubs: boolean;
+  batteryRanges: BatteryRange[];
+  uberTimestampRanges: TimestampRange[];
+  gpsTimestampRanges: TimestampRange[];
+};
+
+function getBatteryBucket(battery: number): BatteryRange {
+  if (battery < 30) return "critical";
+  if (battery < 60) return "low";
+  return "good";
+}
+
+function getTimestampBucket(dateStr: string | null): TimestampRange {
+  if (!dateStr) return "older";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "older";
+  const diff = Date.now() - date.getTime();
+  if (diff <= 3_600_000) return "recent";
+  if (diff <= 86_400_000) return "today";
+  if (diff <= 604_800_000) return "this_week";
+  return "older";
+}
 
 const getCursorSvg = (color: string) => `
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -13,37 +42,70 @@ const getCursorSvg = (color: string) => `
 `;
 
 const STATUS_COLORS: Record<string, string> = {
-  DRIVER_STATUS_ONLINE: "#34d399",
-  DRIVER_STATUS_ONTRIP: "#60a5fa",
-  DRIVER_STATUS_ENROUTE: "#a78bfa",
-  DRIVER_STATUS_OFFLINE: "#71717a",
-  UNASSIGNED: "#fbbf24",
-  DEFAULT: "#60a5fa",
+  DRIVER_STATUS_ONLINE: "#34d399", // emerald-400
+  DRIVER_STATUS_ONTRIP: "#60a5fa", // blue-400
+  DRIVER_STATUS_ENROUTE: "#a78bfa", // violet-400
+  DRIVER_STATUS_OFFLINE: "#71717a", // zinc-500
+  UNASSIGNED: "#fbbf24", // amber-400
+  DEFAULT: "#60a5fa", // blue-400
 };
 
+// Static MapLibre cluster aggregation expressions — hoisted to avoid useMemo overhead
 const CLUSTER_PROPERTIES = {
   online_count: ["+", ["case", ["==", ["get", "status"], "DRIVER_STATUS_ONLINE"], 1, 0]],
   on_trip_count: ["+", ["case", ["==", ["get", "status"], "DRIVER_STATUS_ONTRIP"], 1, 0]],
   low_battery_count: ["+", ["case", ["<", ["get", "Battery"], 30], 1, 0]],
 } as const;
 
+function applyFilters(
+  data: DriverGeoJSON | undefined,
+  filters: FilterState
+): DriverGeoJSON {
+  if (!data) return { type: "FeatureCollection", features: [] };
+
+  const statusSet = new Set(filters.statuses);
+  const movingSet = new Set(filters.movingStatuses);
+  const bikeSet = new Set(filters.bikeMakes);
+  const batterySet = new Set(filters.batteryRanges);
+  const uberTsSet = new Set(filters.uberTimestampRanges);
+  const gpsTsSet = new Set(filters.gpsTimestampRanges);
+
+  const features = data.features.filter((f) => {
+    const p = f.properties as DriverProperties;
+
+    const coords = (f.geometry as GeoJSON.Point).coordinates;
+    if (!coords || coords[0] == null || coords[1] == null) return false;
+
+    const statusOk = !p.status || statusSet.has(p.status);
+    const movingOk = !p.movingStatus || movingSet.has(p.movingStatus);
+    const bikeOk = !p.BikeMake || bikeSet.has(p.BikeMake as BikeMake);
+    const batteryOk = p.Battery == null || batterySet.has(getBatteryBucket(p.Battery));
+    const uberTsOk = uberTsSet.has(getTimestampBucket(p.timestamp));
+    const gpsTsOk = gpsTsSet.has(getTimestampBucket(p.GPSDateTime));
+
+    return statusOk && movingOk && bikeOk && batteryOk && uberTsOk && gpsTsOk;
+  });
+
+  return { type: "FeatureCollection", features } as DriverGeoJSON;
+}
+
 function DriverPopupContent({ feature }: { feature: GeoJSON.Feature }) {
   const { t } = useTranslation();
   const p = (feature?.properties ?? {}) as DriverProperties;
-
+  
   const coordinates = (feature?.geometry as GeoJSON.Point)?.coordinates;
   if (!coordinates || coordinates.length < 2) return null;
   const [lng, lat] = coordinates;
-
+  
   const [copied, setCopied] = useState(false);
-
+ 
   const batteryColor =
     (p.Battery ?? 0) >= 70
       ? "text-green-600 dark:text-green-400"
       : (p.Battery ?? 0) >= 30
         ? "text-amber-600 dark:text-amber-400"
         : "text-red-600 dark:text-red-400";
-
+ 
   const statusKey = p.status?.replace("DRIVER_STATUS_", "").toLowerCase() || "unassigned";
 
   const handleCopy = () => {
@@ -113,60 +175,90 @@ type DriverClustersProps = {
 function DriverClustersInner({ data }: DriverClustersProps) {
   const { map, isLoaded } = useMap();
   const [prevSelectedId, setPrevSelectedId] = useState<string | null>(null);
-  const [popupData, setPopupData] = useState<{ feature: GeoJSON.Feature; coords: [number, number] } | null>(null);
 
+  const statuses = useFilterStore((s) => s.statuses);
+  const movingStatuses = useFilterStore((s) => s.movingStatuses);
+  const bikeMakes = useFilterStore((s) => s.bikeMakes);
+  const batteryRanges = useFilterStore((s) => s.batteryRanges);
+  const uberTimestampRanges = useFilterStore((s) => s.uberTimestampRanges);
+  const gpsTimestampRanges = useFilterStore((s) => s.gpsTimestampRanges);
+  const showArcHubs = useFilterStore((s) => s.showArcHubs);
+  const showZenoHubs = useFilterStore((s) => s.showZenoHubs);
   const selectedId = useMapUIStore((s) => s.selectedDriverId);
 
+  // Load custom colored cursor icons for unclustered points
   useEffect(() => {
     if (!isLoaded || !map) return;
     Object.entries(STATUS_COLORS).forEach(([status, color]) => {
       const id = `cursor-${status}`;
       if (!map.hasImage(id)) {
         const img = new Image(24, 24);
-        img.onload = () => { if (!map.hasImage(id)) map.addImage(id, img); };
+        img.onload = () => {
+          if (!map.hasImage(id)) map.addImage(id, img);
+        };
         img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(getCursorSvg(color))}`;
       }
     });
   }, [isLoaded, map]);
+  const [popupData, setPopupData] = useState<{feature: GeoJSON.Feature, coords: [number, number]} | null>(null);
 
+  const filteredData = useMemo(
+    () => applyFilters(data, { statuses, movingStatuses, bikeMakes, showArcHubs, showZenoHubs, batteryRanges, uberTimestampRanges, gpsTimestampRanges }),
+    [data, statuses, movingStatuses, bikeMakes, showArcHubs, showZenoHubs, batteryRanges, uberTimestampRanges, gpsTimestampRanges]
+  );
+
+  // Vercel Best Practice: Adjusting state during render (avoids double render cycle from useEffect)
   if (selectedId !== prevSelectedId) {
     setPrevSelectedId(selectedId ?? null);
+    
     if (selectedId && data) {
       const feature = data.features.find(
         (f) => (f.properties as DriverProperties).driverUuid === selectedId
       );
-      setPopupData(feature
-        ? { feature, coords: (feature.geometry as GeoJSON.Point).coordinates as [number, number] }
-        : null
-      );
+      if (feature) {
+        setPopupData({
+          feature,
+          coords: (feature.geometry as GeoJSON.Point).coordinates as [number, number]
+        });
+      } else {
+        setPopupData(null);
+      }
     } else {
       setPopupData(null);
     }
   }
 
   const handlePointClick = useCallback(
-    (feature: GeoJSON.Feature, coords: [number, number]) => setPopupData({ feature, coords }),
+    (feature: GeoJSON.Feature, coords: [number, number]) => {
+      setPopupData({ feature, coords });
+    },
     []
   );
 
-  const handleClosePopup = useCallback(() => setPopupData(null), []);
+  const handleClosePopup = useCallback(() => {
+    setPopupData(null);
+  }, []);
+
+  // We count how many bikes in each cluster have specific statuses
+  // (CLUSTER_PROPERTIES is hoisted to module level — stable reference)
 
   return (
     <>
       <MapClusterLayer
-        data={data ?? { type: "FeatureCollection", features: [] }}
+        data={filteredData}
         clusterMaxZoom={14}
         clusterRadius={50}
         clusterProperties={CLUSTER_PROPERTIES}
         clusterColors={["#51bbd6", "#f1f075", "#f28cb1"]}
         clusterThresholds={[100, 750]}
         pointIcon={[
-          "match", ["get", "status"],
-          "DRIVER_STATUS_ONLINE",  "cursor-DRIVER_STATUS_ONLINE",
-          "DRIVER_STATUS_ONTRIP",  "cursor-DRIVER_STATUS_ONTRIP",
+          "match",
+          ["get", "status"],
+          "DRIVER_STATUS_ONLINE", "cursor-DRIVER_STATUS_ONLINE",
+          "DRIVER_STATUS_ONTRIP", "cursor-DRIVER_STATUS_ONTRIP",
           "DRIVER_STATUS_ENROUTE", "cursor-DRIVER_STATUS_ENROUTE",
           "DRIVER_STATUS_OFFLINE", "cursor-DRIVER_STATUS_OFFLINE",
-          "UNASSIGNED",            "cursor-UNASSIGNED",
+          "UNASSIGNED", "cursor-UNASSIGNED",
           "cursor-DEFAULT"
         ]}
         onPointClick={handlePointClick}

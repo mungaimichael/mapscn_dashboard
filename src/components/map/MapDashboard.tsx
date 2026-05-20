@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Users, Box } from "lucide-react";
 import { Map, MapControls } from "@/components/ui/map";
@@ -9,8 +9,7 @@ import { DriverSidebar } from "./sidebar/DriverSidebar";
 import { MapSummaryBox } from "./MapSummaryBox";
 import { Map3DBuildings } from "./Map3DBuildings";
 import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
-import type { DriverGeoJSON } from "./useMapData";
-import { useThemeStore, useMapUIStore, useFilterStore, filterDriverFeatures } from "@/store";
+import { useThemeStore, useMapUIStore, useFilterStore } from "@/store";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 
 const INITIAL_CENTER: [number, number] = [36.82598, -1.29901];
@@ -28,28 +27,10 @@ export function MapDashboard() {
   const toggleSelectedDriver = useMapUIStore((s) => s.toggleSelectedDriver);
   const showArcHubs = useFilterStore((s) => s.showArcHubs);
   const showZenoHubs = useFilterStore((s) => s.showZenoHubs);
-  const statuses = useFilterStore((s) => s.statuses);
-  const movingStatuses = useFilterStore((s) => s.movingStatuses);
-  const bikeMakes = useFilterStore((s) => s.bikeMakes);
-  const batteryRanges = useFilterStore((s) => s.batteryRanges);
-  const uberTimestampRanges = useFilterStore((s) => s.uberTimestampRanges);
-  const gpsTimestampRanges = useFilterStore((s) => s.gpsTimestampRanges);
 
   const { handleViewportChange } = useMapViewport(300);
 
   const { data: driverData, isLoading: isDriversLoading } = useDriverData();
-
-  const filteredDriverData = useMemo<DriverGeoJSON>(() => ({
-    type: "FeatureCollection",
-    features: filterDriverFeatures(driverData?.features ?? [], {
-      statuses,
-      movingStatuses,
-      bikeMakes,
-      batteryRanges,
-      uberTimestampRanges,
-      gpsTimestampRanges,
-    }),
-  }), [driverData, statuses, movingStatuses, bikeMakes, batteryRanges, uberTimestampRanges, gpsTimestampRanges]);
   const { data: arcHubs } = useArcHubs();
   const { data: zenoHubs } = useZenoHubs();
 
@@ -90,7 +71,7 @@ export function MapDashboard() {
       ) : null}
 
       <DriverSidebar
-        data={filteredDriverData}
+        data={driverData}
         onSelect={handleDriverSelect}
       />
 
@@ -136,13 +117,13 @@ export function MapDashboard() {
           <MapControls position="bottom-right" showZoom showCompass showFullscreen />
           <Map3DBuildings enabled={is3DMode} />
 
-          <DriverClusters data={filteredDriverData} />
+          <DriverClusters data={driverData} />
 
           {showArcHubs ? <HubsLayer data={arcHubs} label="Arc Hub" /> : null}
           {showZenoHubs ? <HubsLayer data={zenoHubs} label="Zeno Hub" /> : null}
         </Map>
 
-        <MapSummaryBox data={filteredDriverData} />
+        <MapSummaryBox data={driverData} />
       </div>
     </div>
   );
