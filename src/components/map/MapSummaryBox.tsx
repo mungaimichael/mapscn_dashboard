@@ -26,15 +26,6 @@ const STATUS_COLORS: Record<string, string> = {
   UNASSIGNED: "text-amber-700 bg-amber-500/15 border-amber-500/30 dark:text-amber-400 dark:bg-amber-400/20 dark:border-amber-400/30",
 };
 
-// Hoisted to module level — static, no need to recreate inside render
-const STATUS_ENTRIES: [string, string][] = [
-  ["DRIVER_STATUS_ONLINE",  "Online"],
-  ["DRIVER_STATUS_ONTRIP",  "On Trip"],
-  ["DRIVER_STATUS_ENROUTE", "En Route"],
-  ["DRIVER_STATUS_OFFLINE", "Offline"],
-  ["UNASSIGNED",            "Unassigned"],
-];
-
 function useDraggable(recalculateDeps: any[] = []) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -71,21 +62,15 @@ function useDraggable(recalculateDeps: any[] = []) {
     e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
-    // Snapshot current position into the ref so handlePointerMove doesn't need
-    // position in its closure — avoids recreating the callback on every drag step
-    setPosition((current) => {
-      dragInfo.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        initialX: current.x,
-        initialY: current.y,
-      };
-      return current; // no state change, just reading
-    });
-
     setIsDragging(true);
     setHasMoved(false);
-  }, []); // stable — no position dependency
+    dragInfo.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: position.x,
+      initialY: position.y,
+    };
+  }, [position]);
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
     if (!isDragging || !elementRef.current) return;
@@ -104,47 +89,45 @@ function useDraggable(recalculateDeps: any[] = []) {
   }, [isDragging, enforceBounds]);
 
   const handlePointerUp = useCallback(() => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    // Magnetic Edge Snapping — use functional setState so we always read the
-    // latest position without needing it as a closure dependency
-    setPosition((pos) => {
-      const el = elementRef.current;
-      if (!el?.parentElement) return pos;
-
-      const parent = el.parentElement;
-      const parentRect = parent.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-
-      const snapThreshold = 40;
-      const initialLeftSpace = 24;
-      const initialBottomSpace = 24;
-
-      const maxX = parentRect.width - elRect.width - initialLeftSpace;
-      const minX = -initialLeftSpace;
-      const maxY = initialBottomSpace;
-      const minY = -(parentRect.height - elRect.height - initialBottomSpace);
-
-      let finalX = pos.x;
-      let finalY = pos.y;
-
-      if (Math.abs(pos.x - minX) < snapThreshold) finalX = minX;
-      else if (Math.abs(pos.x - maxX) < snapThreshold) finalX = maxX;
-
-      if (Math.abs(pos.y - minY) < snapThreshold) finalY = minY;
-      else if (Math.abs(pos.y - maxY) < snapThreshold) finalY = maxY;
-
-      return { x: finalX, y: finalY };
-    });
-  }, [isDragging, elementRef]); // position removed — read via functional setState
+    if (isDragging) {
+      setIsDragging(false);
+      
+      // Magnetic Edge Snapping
+      if (elementRef.current && elementRef.current.parentElement) {
+        const parent = elementRef.current.parentElement;
+        const parentRect = parent.getBoundingClientRect();
+        const elRect = elementRef.current.getBoundingClientRect();
+        
+        const snapThreshold = 40;
+        const initialLeftSpace = 24;
+        const initialBottomSpace = 24;
+        
+        const maxX = parentRect.width - elRect.width - initialLeftSpace;
+        const minX = -initialLeftSpace;
+        
+        const maxY = initialBottomSpace; 
+        const minY = -(parentRect.height - elRect.height - initialBottomSpace);
+        
+        let finalX = position.x;
+        let finalY = position.y;
+        
+        if (Math.abs(position.x - minX) < snapThreshold) finalX = minX;
+        else if (Math.abs(position.x - maxX) < snapThreshold) finalX = maxX;
+        
+        if (Math.abs(position.y - minY) < snapThreshold) finalY = minY;
+        else if (Math.abs(position.y - maxY) < snapThreshold) finalY = maxY;
+        
+        if (finalX !== position.x || finalY !== position.y) {
+          setPosition({ x: finalX, y: finalY });
+        }
+      }
+    }
+  }, [isDragging, position]);
 
   useEffect(() => {
     if (isDragging) {
-      // passive: true — these listeners never call preventDefault(), so marking
-      // them passive lets the browser scroll immediately without waiting
-      window.addEventListener('pointermove', handlePointerMove, { passive: true });
-      window.addEventListener('pointerup', handlePointerUp, { passive: true });
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
       return () => {
         window.removeEventListener('pointermove', handlePointerMove);
         window.removeEventListener('pointerup', handlePointerUp);
@@ -266,7 +249,13 @@ export function MapSummaryBox({ data, className }: MapSummaryBoxProps) {
             </div>
             
             <div className="grid grid-cols-3 gap-1.5">
-              {STATUS_ENTRIES.map(([key, defaultLabel]) => {
+              {Object.entries({
+                 DRIVER_STATUS_ONLINE: "Online",
+                 DRIVER_STATUS_ONTRIP: "On Trip",
+                 DRIVER_STATUS_ENROUTE: "En Route",
+                 DRIVER_STATUS_OFFLINE: "Offline",
+                 UNASSIGNED: "Unassigned",
+              }).map(([key, defaultLabel]) => {
                 const Icon = STATUS_ICONS[key] || HelpCircle;
                 const style = STATUS_COLORS[key];
                 const count = counts[key as keyof typeof counts];
