@@ -6,7 +6,7 @@ function rnd(min: number, max: number, decimals = 6) {
 }
 
 
-d
+
 function batteryForStatus(
   status: string,
   moving: string

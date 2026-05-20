@@ -1,11 +1,10 @@
 import { memo, useMemo, useState } from "react";
-import { Search, Users, Sun, Moon, CheckCircle2, X, Globe, Settings2, ChevronDown, Check } from "lucide-react";
+import { Search, Users, Sun, Moon, CheckCircle2, X, Globe, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";
 import { cn } from "@/lib/utils";
 import { DriverListItem } from "./DriverListItem";
 import { useThemeStore, useMapUIStore, useFilterStore } from "@/store";
-import type { BikeMakeFilter, BatteryRange, TimestampRange } from "@/store";
 import type { DriverGeoJSON, DriverProperties, DriverStatus } from "@/components/map/useMapData";
 
 type StatusFilter = DriverStatus | "ALL";
@@ -33,120 +32,6 @@ const ACTIVE_CHIP: Partial<Record<StatusFilter, string>> = {
     "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
 };
 
-const UBER_STATUSES: { value: DriverStatus; label: string }[] = [
-  { value: "DRIVER_STATUS_ONLINE", label: "Online" },
-  { value: "DRIVER_STATUS_ONTRIP", label: "On Trip" },
-  { value: "DRIVER_STATUS_ENROUTE", label: "En Route" },
-  { value: "DRIVER_STATUS_OFFLINE", label: "Offline" },
-  { value: "UNASSIGNED", label: "Unassigned" },
-];
-
-const MOVING_STATUSES: { value: "MOVING" | "PARKED"; label: string }[] = [
-  { value: "MOVING", label: "Moving" },
-  { value: "PARKED", label: "Parked" },
-];
-
-const BATTERY_RANGES: { value: BatteryRange; label: string }[] = [
-  { value: "good", label: "Good (≥ 60%)" },
-  { value: "low", label: "Low (30–59%)" },
-  { value: "critical", label: "Critical (< 30%)" },
-];
-
-const BIKE_MAKES: { value: BikeMakeFilter; label: string }[] = [
-  { value: "Roam", label: "Roam" },
-  { value: "One Electric", label: "One Electric" },
-  { value: "KINGCHE ARC", label: "Kingche Arc" },
-  { value: "Roam Air", label: "Roam Air" },
-  { value: "Zeno Emara", label: "Zeno Emara" },
-  { value: "OTHERS", label: "Others" },
-];
-
-const TIMESTAMP_RANGES: { value: TimestampRange; label: string }[] = [
-  { value: "recent", label: "Last 1 hour" },
-  { value: "today", label: "Last 24 hours" },
-  { value: "this_week", label: "Last 7 days" },
-  { value: "older", label: "Older" },
-];
-
-function FilterSection({
-  title,
-  onClear,
-  children,
-}: {
-  title: string;
-  onClear: () => void;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(true);
-  return (
-    <div>
-      <div
-        className="flex items-center justify-between py-1.5 cursor-pointer select-none"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className="flex items-center gap-1.5">
-          <ChevronDown
-            className={cn(
-              "size-3 text-foreground/40 transition-transform duration-200",
-              !open && "-rotate-90",
-            )}
-          />
-          <span className="text-[9px] font-bold text-foreground/40 uppercase tracking-[0.18em]">
-            {title}
-          </span>
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClear();
-          }}
-          className="text-[9px] text-foreground/30 hover:text-foreground/60 transition-colors"
-        >
-          Clear
-        </button>
-      </div>
-      <div
-        className={cn(
-          "grid transition-all duration-200",
-          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="space-y-0.5 pb-1.5">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CheckItem({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex items-center gap-2 px-1 py-0.5 rounded cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group">
-      <div
-        className={cn(
-          "size-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
-          checked
-            ? "bg-emerald-500 border-emerald-500"
-            : "border-black/20 dark:border-white/20 bg-transparent",
-        )}
-      >
-        {checked && <Check className="size-2 text-white stroke-[3]" />}
-      </div>
-      <span className="text-[10px] text-foreground/60 group-hover:text-foreground/80 transition-colors">
-        {label}
-      </span>
-    </label>
-  );
-}
-
 type DriverSidebarProps = {
   data: DriverGeoJSON | undefined;
   onSelect: (id: string, coords: [number, number]) => void;
@@ -167,26 +52,6 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
   const toggleArcHubs = useFilterStore((s) => s.toggleArcHubs);
   const toggleZenoHubs = useFilterStore((s) => s.toggleZenoHubs);
   const setStatusFilter = useFilterStore((s) => s.setStatusFilter);
-  const statuses = useFilterStore((s) => s.statuses);
-  const movingStatuses = useFilterStore((s) => s.movingStatuses);
-  const bikeMakes = useFilterStore((s) => s.bikeMakes);
-  const batteryRanges = useFilterStore((s) => s.batteryRanges);
-  const uberTimestampRanges = useFilterStore((s) => s.uberTimestampRanges);
-  const gpsTimestampRanges = useFilterStore((s) => s.gpsTimestampRanges);
-  const toggleStatus = useFilterStore((s) => s.toggleStatus);
-  const toggleMoving = useFilterStore((s) => s.toggleMoving);
-  const toggleBikeMake = useFilterStore((s) => s.toggleBikeMake);
-  const toggleBatteryRange = useFilterStore((s) => s.toggleBatteryRange);
-  const toggleUberTimestamp = useFilterStore((s) => s.toggleUberTimestamp);
-  const toggleGpsTimestamp = useFilterStore((s) => s.toggleGpsTimestamp);
-  const clearStatuses = useFilterStore((s) => s.clearStatuses);
-  const clearMovingStatuses = useFilterStore((s) => s.clearMovingStatuses);
-  const clearBikeMakes = useFilterStore((s) => s.clearBikeMakes);
-  const clearBatteryRanges = useFilterStore((s) => s.clearBatteryRanges);
-  const clearUberTimestamps = useFilterStore((s) => s.clearUberTimestamps);
-  const clearGpsTimestamps = useFilterStore((s) => s.clearGpsTimestamps);
-
-  const applyFilters = useFilterStore((s) => s.applyFilters);
 
   const { t, i18n } = useTranslation();
 
@@ -375,87 +240,6 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
                   Zeno Hubs {showZenoHubs && <CheckCircle2 className="size-3" />}
                 </button>
               </div>
-            </div>
-
-            {/* ── Filter Sections ── */}
-            <div className="border-t border-black/[0.06] dark:border-white/[0.06] pt-2 space-y-0.5">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em]">
-                  Filters
-                </p>
-                <button
-                  onClick={() => { clearStatuses(); clearMovingStatuses(); clearBikeMakes(); clearBatteryRanges(); clearUberTimestamps(); clearGpsTimestamps(); }}
-                  className="text-[9px] text-foreground/30 hover:text-foreground/60 transition-colors"
-                >
-                  Clear All
-                </button>
-              </div>
-
-              <FilterSection title="Uber Status" onClear={clearStatuses}>
-                {UBER_STATUSES.map(({ value, label }) => (
-                  <CheckItem
-                    key={value}
-                    label={label}
-                    checked={statuses.includes(value)}
-                    onChange={() => toggleStatus(value)}
-                  />
-                ))}
-              </FilterSection>
-
-              <FilterSection title="Moving Status" onClear={clearMovingStatuses}>
-                {MOVING_STATUSES.map(({ value, label }) => (
-                  <CheckItem
-                    key={value}
-                    label={label}
-                    checked={movingStatuses.includes(value)}
-                    onChange={() => toggleMoving(value)}
-                  />
-                ))}
-              </FilterSection>
-
-              <FilterSection title="Battery Level" onClear={clearBatteryRanges}>
-                {BATTERY_RANGES.map(({ value, label }) => (
-                  <CheckItem
-                    key={value}
-                    label={label}
-                    checked={batteryRanges.includes(value)}
-                    onChange={() => toggleBatteryRange(value)}
-                  />
-                ))}
-              </FilterSection>
-
-              <FilterSection title="Bike Model" onClear={clearBikeMakes}>
-                {BIKE_MAKES.map(({ value, label }) => (
-                  <CheckItem
-                    key={value}
-                    label={label}
-                    checked={bikeMakes.includes(value)}
-                    onChange={() => toggleBikeMake(value)}
-                  />
-                ))}
-              </FilterSection>
-
-              <FilterSection title="Uber Timestamp" onClear={clearUberTimestamps}>
-                {TIMESTAMP_RANGES.map(({ value, label }) => (
-                  <CheckItem
-                    key={value}
-                    label={label}
-                    checked={uberTimestampRanges.includes(value)}
-                    onChange={() => toggleUberTimestamp(value)}
-                  />
-                ))}
-              </FilterSection>
-
-              <FilterSection title="GPS Timestamp" onClear={clearGpsTimestamps}>
-                {TIMESTAMP_RANGES.map(({ value, label }) => (
-                  <CheckItem
-                    key={value}
-                    label={label}
-                    checked={gpsTimestampRanges.includes(value)}
-                    onChange={() => toggleGpsTimestamp(value)}
-                  />
-                ))}
-              </FilterSection>
             </div>
           </div>
         </div>
