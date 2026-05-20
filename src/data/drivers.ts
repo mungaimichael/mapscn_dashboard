@@ -291,7 +291,7 @@ export const driverMockData = {
                 "Odometer": null,
                 "statusDuration": 5,
                 "ImeiNumber": null,
-                "BikeMake": "OTHERS"
+                "BikeMake": "s"
             },
             "geometry": {
                 "type": "Point",

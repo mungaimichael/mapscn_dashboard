@@ -9,8 +9,64 @@ export type TimestampRange = "recent" | "today" | "this_week" | "older";
 const toggle = <T>(arr: T[], item: T): T[] =>
   arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
 
-const toBatteryRange = (pct: number): BatteryRange =>
+export const toBatteryRange = (pct: number): BatteryRange =>
   pct >= 60 ? "good" : pct >= 30 ? "low" : "critical";
+
+export const toTimestampRange = (dateStr: string | null): TimestampRange => {
+  if (!dateStr) return "older";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (isNaN(diff)) return "older";
+  if (diff <= 3_600_000) return "recent";
+  if (diff <= 86_400_000) return "today";
+  if (diff <= 604_800_000) return "this_week";
+  return "older";
+};
+
+export type ActiveFilters = {
+  statuses: DriverStatus[];
+  movingStatuses: MovingStatus[];
+  bikeMakes: BikeMakeFilter[];
+  batteryRanges: BatteryRange[];
+  uberTimestampRanges: TimestampRange[];
+  gpsTimestampRanges: TimestampRange[];
+};
+
+export function filterDriverFeatures(
+  features: DriverFeature[],
+  filters: ActiveFilters,
+): DriverFeature[] {
+  const statusSet = new Set(filters.statuses);
+  const movingSet = new Set(filters.movingStatuses);
+  const bikeSet = new Set(filters.bikeMakes);
+  const batterySet = new Set(filters.batteryRanges);
+  const uberTsSet = new Set(filters.uberTimestampRanges);
+  const gpsTsSet = new Set(filters.gpsTimestampRanges);
+
+  return features.filter((f) => {
+    const p = f.properties;
+
+    // Drop features with no identity — everything else is optional telemetry
+    if (!p.driverName || !p.licensePlate) return false;
+
+    // Uber status is always present — always apply this filter
+    if (!statusSet.has(p.status)) return false;
+
+    // Optional telemetry: skip the check when the value is absent
+    if (p.movingStatus != null && !movingSet.has(p.movingStatus)) return false;
+    if (p.BikeMake != null && !bikeSet.has(p.BikeMake as BikeMakeFilter)) return false;
+
+    // Battery: 0 signals no telemetry data (offline bikes) — skip if absent or zero
+    if (p.Battery != null && p.Battery > 0 && !batterySet.has(toBatteryRange(p.Battery))) return false;
+
+    // Uber timestamp: skip if field is absent
+    if (p.timestamp != null && !uberTsSet.has(toTimestampRange(p.timestamp))) return false;
+
+    // GPS timestamp: many offline bikes have no GPSDateTime — skip if absent
+    if (p.GPSDateTime != null && !gpsTsSet.has(toTimestampRange(p.GPSDateTime))) return false;
+
+    return true;
+  });
+}
 
 export interface FilterState {
   statuses: DriverStatus[];
@@ -37,7 +93,6 @@ export interface FilterState {
   clearBatteryRanges: () => void;
   clearUberTimestamps: () => void;
   clearGpsTimestamps: () => void;
-  applyFilters: (features: DriverFeature[]) => DriverFeature[];
 }
 
 const DEFAULT_STATUSES: DriverStatus[] = [
@@ -65,7 +120,7 @@ const DEFAULT_TIMESTAMP_RANGES: TimestampRange[] = ["recent", "today", "this_wee
 export const useFilterStore = create<FilterState>()(
   devtools(
     persist(
-      (set, get) => ({
+      (set) => ({
         statuses: DEFAULT_STATUSES,
         movingStatuses: DEFAULT_MOVING,
         bikeMakes: DEFAULT_BIKE_MAKES,
@@ -108,18 +163,6 @@ export const useFilterStore = create<FilterState>()(
         clearBatteryRanges: () => set({ batteryRanges: DEFAULT_BATTERY_RANGES }, false, "clearBatteryRanges"),
         clearUberTimestamps: () => set({ uberTimestampRanges: DEFAULT_TIMESTAMP_RANGES }, false, "clearUberTimestamps"),
         clearGpsTimestamps: () => set({ gpsTimestampRanges: DEFAULT_TIMESTAMP_RANGES }, false, "clearGpsTimestamps"),
-
-        applyFilters: (features) => {
-          const { statuses, movingStatuses, bikeMakes, batteryRanges } = get();
-          return features.filter((f) => {
-            const p = f.properties;
-            if (!statuses.includes(p.status)) return false;
-            if (p.movingStatus !== null && !movingStatuses.includes(p.movingStatus)) return false;
-            if (!bikeMakes.includes(p.BikeMake as BikeMakeFilter)) return false;
-            if (!batteryRanges.includes(toBatteryRange(p.Battery))) return false;
-            return true;
-          });
-        },
       }),
       {
         name: "map-filters",

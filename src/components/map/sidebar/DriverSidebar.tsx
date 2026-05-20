@@ -1,12 +1,28 @@
-import { memo, useMemo, useState } from "react";
-import { Search, Users, Sun, Moon, CheckCircle2, X, Globe, Settings2, ChevronDown, Check } from "lucide-react";
+import { memo, useCallback, useMemo, useState } from "react";
+import {
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Download,
+  Globe,
+  Moon,
+  Search,
+  Settings2,
+  Sun,
+  Users,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";
 import { cn } from "@/lib/utils";
 import { DriverListItem } from "./DriverListItem";
 import { useThemeStore, useMapUIStore, useFilterStore } from "@/store";
 import type { BikeMakeFilter, BatteryRange, TimestampRange } from "@/store";
-import type { DriverGeoJSON, DriverProperties, DriverStatus } from "@/components/map/useMapData";
+import type {
+  DriverGeoJSON,
+  DriverProperties,
+  DriverStatus,
+} from "@/components/map/useMapData";
 
 type StatusFilter = DriverStatus | "ALL";
 
@@ -56,7 +72,6 @@ const BIKE_MAKES: { value: BikeMakeFilter; label: string }[] = [
   { value: "Roam", label: "Roam" },
   { value: "One Electric", label: "One Electric" },
   { value: "KINGCHE ARC", label: "Kingche Arc" },
-  { value: "Roam Air", label: "Roam Air" },
   { value: "Zeno Emara", label: "Zeno Emara" },
   { value: "OTHERS", label: "Others" },
 ];
@@ -100,7 +115,7 @@ function FilterSection({
             e.stopPropagation();
             onClear();
           }}
-          className="text-[9px] text-foreground/30 hover:text-foreground/60 transition-colors"
+          className=" border border-gray-300 w-[5rem] rounded-xl text-[9px] text-foreground/30 hover:text-foreground/60 hover:bg-slate-200 transition-colors"
         >
           Clear
         </button>
@@ -129,7 +144,10 @@ function CheckItem({
   onChange: () => void;
 }) {
   return (
-    <label className="flex items-center gap-2 px-1 py-0.5 rounded cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group">
+    <label
+      className="flex items-center gap-2 px-1 py-0.5 rounded cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group"
+      onClick={onChange}
+    >
       <div
         className={cn(
           "size-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
@@ -166,7 +184,6 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
   const showZenoHubs = useFilterStore((s) => s.showZenoHubs);
   const toggleArcHubs = useFilterStore((s) => s.toggleArcHubs);
   const toggleZenoHubs = useFilterStore((s) => s.toggleZenoHubs);
-  const setStatusFilter = useFilterStore((s) => s.setStatusFilter);
   const statuses = useFilterStore((s) => s.statuses);
   const movingStatuses = useFilterStore((s) => s.movingStatuses);
   const bikeMakes = useFilterStore((s) => s.bikeMakes);
@@ -185,8 +202,6 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
   const clearBatteryRanges = useFilterStore((s) => s.clearBatteryRanges);
   const clearUberTimestamps = useFilterStore((s) => s.clearUberTimestamps);
   const clearGpsTimestamps = useFilterStore((s) => s.clearGpsTimestamps);
-
-  const applyFilters = useFilterStore((s) => s.applyFilters);
 
   const { t, i18n } = useTranslation();
 
@@ -239,8 +254,36 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
 
   const handleStatusToggle = (status: StatusFilter) => {
     setActiveStatus(status);
-    setStatusFilter(status === "ALL" ? null : status);
   };
+
+  const downloadCSV = useCallback(() => {
+    const headers = [
+      "UUID", "Name", "License Plate", "Phone",
+      "Status", "Moving Status", "Bike Make", "Battery (%)",
+      "GPS DateTime", "Uber Timestamp", "Speed (km/h)", "Status Duration (min)",
+    ];
+
+    const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+
+    const rows = filtered.map((f) => {
+      const p = f.properties as DriverProperties;
+      return [
+        p.driverUuid, p.driverName, p.licensePlate, p.phone,
+        p.status, p.movingStatus, p.BikeMake, p.Battery,
+        p.GPSDateTime, p.timestamp, p.VehicleSpeed, p.statusDuration,
+      ].map(escape).join(",");
+    });
+
+    const csv = [headers.map(escape).join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().replace("T", "_").replace(/:/g, "-").split(".")[0];
+    a.href = url;
+    a.download = `driver_data_${ts}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filtered]);
 
   return (
     <aside
@@ -317,18 +360,22 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
       <div
         className={cn(
           "grid transition-all duration-300 ease-in-out border-b border-black/[0.05] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.01]",
-          isLangOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 border-b-0",
+          isLangOpen
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0 border-b-0",
         )}
       >
         <div className="overflow-hidden">
-          <div className="px-4 py-3 space-y-4">
+          <div className="px-4 py-3 space-y-4 max-h-[55vh] overflow-y-auto scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10">
             <div>
               <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">
                 Preferences
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => changeLanguage(i18n.language === "en" ? "sw" : "en")}
+                  onClick={() =>
+                    changeLanguage(i18n.language === "en" ? "sw" : "en")
+                  }
                   className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md border border-black/[0.08] dark:border-white/[0.08] text-[11px] font-medium text-foreground/60"
                 >
                   <Globe className="size-3.5" />{" "}
@@ -372,20 +419,28 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
                       : "border-black/[0.08] dark:border-white/[0.08] text-foreground/40",
                   )}
                 >
-                  Zeno Hubs {showZenoHubs && <CheckCircle2 className="size-3" />}
+                  Zeno Hubs{" "}
+                  {showZenoHubs && <CheckCircle2 className="size-3" />}
                 </button>
               </div>
             </div>
 
             {/* ── Filter Sections ── */}
-            <div className="border-t border-black/[0.06] dark:border-white/[0.06] pt-2 space-y-0.5">
+            <div className="border-t border-black/[0.06] dark:border-white/[0.06] pt-2 space-y-0.5 ">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em]">
                   Filters
                 </p>
                 <button
-                  onClick={() => { clearStatuses(); clearMovingStatuses(); clearBikeMakes(); clearBatteryRanges(); clearUberTimestamps(); clearGpsTimestamps(); }}
-                  className="text-[9px] text-foreground/30 hover:text-foreground/60 transition-colors"
+                  onClick={() => {
+                    clearStatuses();
+                    clearMovingStatuses();
+                    clearBikeMakes();
+                    clearBatteryRanges();
+                    clearUberTimestamps();
+                    clearGpsTimestamps();
+                  }}
+                  className=" border border-gray-300 w-[5rem] rounded-xl font-semibold text-[9px] text-foreground/30 hover:text-foreground/60 hover:bg-slate-200 transition-colors"
                 >
                   Clear All
                 </button>
@@ -402,7 +457,10 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
                 ))}
               </FilterSection>
 
-              <FilterSection title="Moving Status" onClear={clearMovingStatuses}>
+              <FilterSection
+                title="Moving Status"
+                onClear={clearMovingStatuses}
+              >
                 {MOVING_STATUSES.map(({ value, label }) => (
                   <CheckItem
                     key={value}
@@ -435,7 +493,10 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
                 ))}
               </FilterSection>
 
-              <FilterSection title="Uber Timestamp" onClear={clearUberTimestamps}>
+              <FilterSection
+                title="Uber Timestamp"
+                onClear={clearUberTimestamps}
+              >
                 {TIMESTAMP_RANGES.map(({ value, label }) => (
                   <CheckItem
                     key={value}
@@ -474,6 +535,19 @@ function DriverSidebarInner({ data, onSelect }: DriverSidebarProps) {
             {totalOnline} Online
           </span>
         </div>
+
+        <div className="relative group">
+          <button
+            className="p-1.5 rounded-md border border-black/[0.08] dark:border-white/[0.08] text-foreground/50 hover:text-foreground/80 transition-colors"
+            onClick={downloadCSV}
+          >
+            <Download className="size-3.5" />
+          </button>
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded text-[10px] bg-foreground text-background shadow-md whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            Download driver data
+          </span>
+        </div>
+      
       </div>
 
       <div className="flex-1 min-h-0">
