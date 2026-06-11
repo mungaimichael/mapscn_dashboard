@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MapDashboard } from "@/components/map/MapDashboard";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { TenantProvider } from "@/hooks/useTenant";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,9 +15,11 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <MapDashboard />
-      </QueryClientProvider>
+      <TenantProvider>
+        <QueryClientProvider client={queryClient}>
+          <MapDashboard />
+        </QueryClientProvider>
+      </TenantProvider>
     </ThemeProvider>
   );
 }

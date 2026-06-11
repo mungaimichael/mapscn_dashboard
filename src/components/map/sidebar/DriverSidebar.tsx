@@ -5,6 +5,7 @@ import { Virtuoso } from "react-virtuoso";
 import { cn } from "@/lib/utils";
 import { DriverListItem } from "./DriverListItem";
 import { useTheme } from "@/hooks/useTheme";
+import { useTenant } from "@/hooks/useTenant";
 import type { DriverGeoJSON, DriverProperties, DriverStatus } from "@/components/map/useMapData";
 import type { FilterState } from "../DriverClusters";
 import type { FilterAction } from "../MapDashboard";
@@ -49,6 +50,7 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("ALL");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { tenant } = useTenant();
   const { t, i18n } = useTranslation();
 
   const changeLanguage = (lang: string) => {
@@ -168,6 +170,13 @@ function DriverSidebarInner({ data, selectedId, onSelect, filters, dispatch, isO
         <div className="overflow-hidden">
           <div className="px-4 py-3 space-y-4">
             <div>
+              <div className="mb-4">
+                <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">Market Context</p>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.02] text-xs">
+                  <span className="font-semibold text-foreground/80">{tenant.marketName}</span>
+                  <span className="text-[10px] text-foreground/40">({tenant.countryCode})</span>
+                </div>
+              </div>
               <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em] mb-2">Preferences</p>
               <div className="flex gap-2">
                 <button
