@@ -1,4 +1,5 @@
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import type { TenantConfig } from '@/config/tenantConfig';
 import { getTenantConfig } from '@/config/tenantConfig';
 
