@@ -6,6 +6,7 @@ import type { MapRef } from "@/components/ui/map";
 import { DriverClusters } from "./DriverClusters";
 import { HubsLayer } from "./HubsLayer";
 import { DriverSidebar } from "./sidebar/DriverSidebar";
+import { TestPayloadForm } from "./TestPayloadForm";
 import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
 import { useTheme } from "@/hooks/useTheme";
 import { useTenant } from "@/hooks/useTenant";
@@ -182,6 +183,11 @@ export function MapDashboard() {
           {filters.showArcHubs && <HubsLayer data={arcHubs} label="Arc Hub" />}
           {filters.showZenoHubs && <HubsLayer data={zenoHubs} label="Zeno Hub" />}
         </Map>
+
+        {/* ── Test Payload Form (Floating Bottom-Left) ── */}
+        <div className="absolute bottom-8 left-8 z-30 pointer-events-none">
+          <TestPayloadForm />
+        </div>
       </div>
     </div>
   );
