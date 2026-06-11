@@ -11,6 +11,7 @@ A modern dashboard application built with React, TypeScript, and Vite.
 - **UI Components:** Styled with `shadcn` and `@base-ui/react`.
 - **Data Fetching:** `@tanstack/react-query` for asynchronous state management.
 - **Icons:** `lucide-react` for beautiful and consistent iconography.
+- **Multi-Tenancy:** Dynamic context loading based on environment variables or URL query parameters to serve different markets.
 
 ## Getting Started
 
@@ -48,6 +49,20 @@ To preview the production build:
 ```bash
 npm run preview
 ```
+
+## Multi-Tenancy Testing
+
+The application supports simulated multi-tenancy based on market context. This affects the default language, map center, and other market-specific configurations.
+
+By default, the app loads the **Kenya** context (English, centered on Nairobi). 
+
+To switch contexts locally during development, you can append the `?tenant=<id>` query parameter to your URL:
+
+- **Kenya (Default)**: `http://localhost:3000/?tenant=ke`
+- **Nigeria**: `http://localhost:3000/?tenant=ng` (Centered on Lagos)
+- **Tanzania**: `http://localhost:3000/?tenant=tz` (Loads Swahili by default, centered on Dar es Salaam)
+
+Alternatively, you can set the `VITE_TENANT_ID` environment variable before running the development server.
 
 ## Scripts
 
