@@ -8,12 +8,10 @@ import { HubsLayer } from "./HubsLayer";
 import { DriverSidebar } from "./sidebar/DriverSidebar";
 import { useDriverData, useArcHubs, useZenoHubs, useMapViewport } from "./useMapData";
 import { useTheme } from "@/hooks/useTheme";
+import { useTenant } from "@/hooks/useTenant";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import type { FilterState } from "./DriverClusters";
 import type { DriverStatus, MovingStatus } from "./useMapData";
-
-// Nairobi center
-const INITIAL_CENTER: [number, number] = [36.82598, -1.29901];
 const INITIAL_ZOOM = 10.5;
 
 const DEFAULT_FILTERS: FilterState = {
@@ -85,6 +83,7 @@ export function MapDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const mapRef = useRef<MapRef>(null);
   const { theme } = useTheme();
+  const { tenant } = useTenant();
 
   // Debounced viewport tracker — invalidates queries only after map is idle for 300ms
   const { handleViewportChange } = useMapViewport(300);
@@ -165,7 +164,7 @@ export function MapDashboard() {
 
         <Map
           ref={mapRef}
-          center={INITIAL_CENTER}
+          center={tenant.defaultCenter}
           zoom={INITIAL_ZOOM}
           theme={theme}
           dragRotate={true}
